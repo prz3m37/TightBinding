@@ -164,7 +164,18 @@ class TightBinding(object):
         
         return columns, rows, values, num
 
-    def __create_sparse_matrix(self, dimension, **kwargs):
+    def __create_sparse_matrix(self, dimension, **kwargs) -> csr_matrix:
+
+        """
+        Method converts calculated rows, columns, and non-zero values into sparse matrix.
+
+        Args:
+            dimension: dimension of Slater Koster matrix
+            **kwargs: arguments of __get_non_zero_values_and_indices method
+
+        Returns: sparse interaction matrix for all interacting atoms in lattice in csr format
+
+        """
 
         columns, rows, values, num = self.__get_non_zero_values_and_indices(**kwargs)
         matrix_final = coo_matrix((values, (rows, columns)), shape=(dimension * num, dimension * num))
@@ -172,22 +183,41 @@ class TightBinding(object):
 
         return matrix_final
 
-    def construct_lattice(self, **kwargs):
+    def construct_lattice(self, **kwargs) -> (pd.DataFrame, int):
+
+        """
+        Method constructs lattice of atoms and saves it in form of pd.DataFrame
+        Args:
+            **kwargs: arguments of construct_skeleton method
+
+        Returns: pd.DataFrame with lattice data, and it's shape
+
+        """
 
         lattice = self.__construct.construct_skeleton(**kwargs)
         lattice_data_frame_format = self.__construct.dump_to_dframe(lattice)
-        dimension = int(lattice.shape[0])
+        shape = int(lattice.shape[0])
 
-        return lattice_data_frame_format, dimension
+        return lattice_data_frame_format, shape
 
-    def calculate_eigenvalues_ang_eigenvectors(self, num_of_eigenvalues, which, **kwargs):
+    def calculate_eigenvalues_ang_eigenvectors(self, num_of_eigenvalues, which='LM', **kwargs) -> (np.array, np.array):
+
+        """
+        Method calculates eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix.
+        Args:
+            num_of_eigenvalues: number of eigenvalues to count
+            which:
+            **kwargs: arguments of __create_sparse_matrix method
+
+        Returns: eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix
+
+        """
 
         sparse_matrix = self.__create_sparse_matrix(**kwargs)
         print('Eigenvalues calculating')
         eigenvalues, eigenvectors = eigsh(sparse_matrix, k=num_of_eigenvalues, which=which)
 
         return eigenvalues, eigenvectors
-
 
 
 atom_store_example1 = {'C': {'Es': -8.71,
@@ -248,16 +278,17 @@ constans_of_pairs_example1 = {('C', 'C'): {'V_sssigma': 0,
                                            'V_ddd': 0}}
 
 # TODO przemysleć jak radzić sobie z brakiem atomu (forma zapisu)
-
+# TODO density of states w pracy ELENY
+# TODO taśma grafenowa idealna , a potem robie dziury, parametryzacja dla grafenu zapytac google tight binding. gdy nie mam atomu potencjał bardzo duzy sprawdzenie on site energies bardzo duze
+# TODO 5000 tys atomów 
+# TODO shift invert 
 
 start = time.time()
 
 tb = TightBinding()
 lattice_data_frame_format, dims = tb.construct_lattice(a=1,
-                                                      vertical_num_of_atoms=5,
-                                                      horizontal_num_of_atoms=6,
-                                                      start=-100,
-                                                      stop=100)
+                                                       vertical_num_of_atoms=30,
+                                                       horizontal_num_of_atoms=40)
 
 print('Calculation for ', str(dims), ' atoms')
 
@@ -269,19 +300,12 @@ eigenvaluess, eigenvectorss = tb.calculate_eigenvalues_ang_eigenvectors(dimensio
                                                                         distance=1,
                                                                         constants_of_pairs=constans_of_pairs_example1,
                                                                         atom_store=atom_store_example1,
-                                                                        num_of_eigenvalues=1000,
-                                                                        which= 'LM',
-                                                                        lp=1,
-                                                                        ld=1)
+                                                                        num_of_eigenvalues=100,
+                                                                        which= 'LM')
 
 
 end = time.time()
 print('Calculation time for ' + str(dims) + ' atoms: ', (end - start) / 60., ' minutes')
-# print(np.unique(eigenvaluess))
-print()
-eigv = [round(i, 2) for i in eigenvaluess]
-import matplotlib.pyplot as plt
 
-plt.hist(eigv)
-plt.show()
 
+print(eigenvaluess)

@@ -3,6 +3,12 @@ import numpy as np
 
 class SlaterKoster(object):
 
+    """
+    SlaterKoster class calculates Slater Koster matrix which describes interactions between two atoms in lattice.
+        User can define whether interactions wants to take Spin Orbit interaction into consideration.
+
+    """
+
     @staticmethod
     def get_atom_type(atom_store: dict, atom_type: str):
 

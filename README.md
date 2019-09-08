@@ -1,2 +1,3 @@
 # TightBinding
-for master dyploma 
+for master diploma
+

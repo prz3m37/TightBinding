@@ -126,9 +126,9 @@ class TightBinding(object):
 
             h_diagonal_rows = h_diagonal_non_zero_indices[0] + int(host * num)
             h_diagonal_columns = h_diagonal_non_zero_indices[1] + int(host * num)
-            
+
             columns.append(h_diagonal_columns)
-            rows.append(h_diagonal_rows)         
+            rows.append(h_diagonal_rows)
             values.append(h_diagonal_non_zero_values)
 
             if len(friends) != 0:
@@ -145,24 +145,24 @@ class TightBinding(object):
                                                                          type_of_host,
                                                                          type_of_friend,
                                                                          flat)
-                                                                         
+
                     h_sk_non_zero_indices = np.where(h_sk != 0)
                     h_sk_non_zero_values = np.array(h_sk[h_sk_non_zero_indices])[0]
-                    
+
                     h_sk_rows = h_sk_non_zero_indices[0] + int(host * num)
-                    h_sk_columns = h_sk_non_zero_indices[1] + int(friend * num)   
-                    
+                    h_sk_columns = h_sk_non_zero_indices[1] + int(friend * num)
+
                     columns.append(h_sk_columns)
                     rows.append(h_sk_rows)
                     values.append(h_sk_non_zero_values)
 
                 pass
-        
+
         columns = np.concatenate(columns)
         rows = np.concatenate(rows)
         values = np.concatenate(values)
         print('Matrix calculated')
-        
+
         return columns, rows, values, num
 
     def __create_sparse_matrix(self, dimension, **kwargs) -> csr_matrix:
@@ -223,12 +223,17 @@ class TightBinding(object):
         return eigenvalues, eigenvectors
 
     @staticmethod
-    def evaluate_density_of_states(En, E):
+    def evaluate_density_of_states(En, E, eigenstates):
 
         a = (np.max(En) - np.min(En)) / len(En)
         D_E = [np.sum(np.exp(-(En - e)**2 / (2*a**2)) / (np.pi * a * np.sqrt(2))) for e in E]
 
-        return D_E
+        eigenstate_En = eigenstates[np.where(En)]
+        D_eigenstate = [np.sum(np.abs(np.dot(eigenstate, eigenstate_En))**2 * np.exp(-(En - e)**2 / (2*a**2)) / (np.pi * a * np.sqrt(2))) for e, eigenstate in zip(E, eigenstates)]
+        D = np.sum(D_eigenstate)
+
+        return D_E, D, D_eigenstate
+
 
 
 atom_store_example1 = {'C': {'Es': -8.7,
@@ -289,7 +294,7 @@ constans_of_pairs_example1 = {('C', 'C'): {'V_sssigma': -6.7,
                                            'V_ddd': 0}}
 
 # TODO taśma grafenowa idealna , a potem robie dziury, parametryzacja dla grafenu zapytac google tight binding. gdy nie mam atomu potencjał bardzo duzy sprawdzenie on site energies bardzo duze -  wygenerowac
-# TODO 5000 tys atomów 
+# TODO 5000 tys atomów
 
 
 start = time.time()
@@ -315,7 +320,7 @@ energy, wave_function = tb.calculate_eigenvalues_ang_eigenvectors(dimension=dims
 E = np.arange(-20, 20, 0.1)
 
 # energy = sigma + (1 / energy)
-density_of_states = tb.evaluate_density_of_states(energy, E)
+density_of_states = tb.evaluate_density_of_states(energy[0], E)[0]
 
 
 end = time.time()

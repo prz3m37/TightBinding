@@ -32,6 +32,17 @@ class SlaterKoster(object):
     @staticmethod
     def __get_interaction_constans(constants: dict, atom_i_type: str, atom_j_type: str):
 
+        """
+
+        Args:
+            constants:
+            atom_i_type:
+            atom_j_type:
+
+        Returns:
+
+        """
+
         if constants is None:
 
             const = {'V_sssigma': 0,
@@ -55,6 +66,16 @@ class SlaterKoster(object):
     @staticmethod
     def __get_directional_cosines(ri: np.array, rj: np.array):
 
+        """
+
+        Args:
+            ri:
+            rj:
+
+        Returns:
+
+        """
+
         r_diff = ri - rj
         r_diff_mod = np.linalg.norm(ri - rj)
 
@@ -62,6 +83,20 @@ class SlaterKoster(object):
         return n
 
     def __calculate_slayterkoster_matrix(self, ri, rj, constants_of_pairs, atom_i_type, atom_j_type, flat):
+
+        """
+
+        Args:
+            ri:
+            rj:
+            constants_of_pairs:
+            atom_i_type:
+            atom_j_type:
+            flat:
+
+        Returns:
+
+        """
 
         H_SK = np.zeros((10, 10))
         n = self.__get_directional_cosines(ri, rj)
@@ -241,6 +276,20 @@ class SlaterKoster(object):
 
     def __spin_orbit_hamiltonian(self, atom_store, atom_type, lp, ld, sgn, sigma):
 
+        """
+
+        Args:
+            atom_store:
+            atom_type:
+            lp:
+            ld:
+            sgn:
+            sigma:
+
+        Returns:
+
+        """
+
         H_SK = np.zeros((10, 10), complex)
 
         state_energies_of_atom = self.get_atom_type(atom_store, atom_type)
@@ -418,6 +467,16 @@ class SlaterKoster(object):
 
     def __calculate_energy_matrix(self, atom_store, atom_type):
 
+        """
+
+        Args:
+            atom_store:
+            atom_type:
+
+        Returns:
+
+        """
+
         atom_parameters = self.get_atom_type(atom_store, atom_type)
         H_Rii = np.zeros((10, 10))
 
@@ -445,6 +504,21 @@ class SlaterKoster(object):
 
     def calculate_spin_mixing_sk(self, calculation_type, ri, rj, constants_of_pairs, atom_i, atom_j, flat):
 
+        """
+
+        Args:
+            calculation_type:
+            ri:
+            rj:
+            constants_of_pairs:
+            atom_i:
+            atom_j:
+            flat:
+
+        Returns:
+
+        """
+
         if calculation_type == 'non spin':
 
             the_chosen_one = np.matrix(self.__calculate_slayterkoster_matrix(ri, rj, constants_of_pairs, atom_i, atom_j,
@@ -459,6 +533,19 @@ class SlaterKoster(object):
         return the_chosen_one
 
     def calculate_spin_mixing_diagonal(self, calculation_type, atom_store, atom_type, lp, ld):
+
+        """
+
+        Args:
+            calculation_type:
+            atom_store:
+            atom_type:
+            lp:
+            ld:
+
+        Returns:
+
+        """
 
         if calculation_type == 'non spin':
 

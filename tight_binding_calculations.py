@@ -17,19 +17,16 @@ class TightBinding(object):
         lattice of atoms is described by Slater-Koster matrix of shape = (10, 10). We take into consideration the
         following orbitals: s, px, py, pz, dxy, dyz, dz2, dxz, dx2dy2, s* in our calculations. The main advantage of
         this program is possibility to calculate electronic band structure for cases like:
-
         1. Any shape of atom lattices
         2. Lattices with or without defects (i.e. missing atoms)
         3. Multi-level lattices.
         4. Lattices containing different types of atoms.
-
     """
 
     def __init__(self) -> None:
 
         """
         Method calls SlaterKoster and  LatticeConstructor class
-
         """
         self.__slater_coster = SlaterKoster()
         self.__construct = LatticeConstructor()
@@ -38,20 +35,15 @@ class TightBinding(object):
     def __get_closest_friends(points: list, method: str, number_of_friends: int = None, distance: float = None) -> list:
 
         """
-
         Method uses KDTree algorithm for searching closets neighbours (according to Euclidean space) of each atom in
             lattice no matter what shape is.
-
         Args:
             points: list of coordinates [x,y,z] of all points in lattice.
             method: type of method of searching closest neighbours; if method == 'distance', algorithm will search
                     points in defined distance; else algorithm, will find defined by user number of neighbours.
-
             number_of_friends: defined by user, number of neighbours of point in lattice
             distance: maximum distance defining point as closest neighbour.
-
         Returns: List of indices of points which are neighbours.
-
         """
 
         tree = sn.KDTree(points, leaf_size=2)
@@ -66,38 +58,29 @@ class TightBinding(object):
                                           flat=True) -> (list, list, list):
 
         """
-
         Method calculates non-zero values (Slater Koster matrix values) with their localization (indices of rows and
             columns) in the final interaction matrix.
-
         Args:
             data: Input DataFrame where: Indices - integers -standard pd.DataFrame enumeration,
                   Columns: number_of_atom - number of atom in lattice, localization - localization of atom in
                   lattice in format of nested lists [[x1,y1,z1], [x2,y2,z2],...], type_of_atom - type of element of atom
                   string format, for example 'C'
-
             calculation_type: if calculation_type == 'non spin' Slater Koster matrix will not include Spin-Orbit
                               interactions; else Spin-Orbit interactions will be included
-
             method: type of method of searching closest neighbours; if method == 'distance', algorithm will search
                     points in defined distance; else algorithm, will find defined by user number of neighbours.
-
             distance: maximum distance defining point as closest neighbour.
             constants_of_pairs: dict of Slater Koster constants describing interactions between two elements for each
                                 orbital; example of input - {('C', 'C'): {'V_sssigma': 0, 'V_spsigma': 0,
                                 'V_sdsigma': 0,...
-
             atom_store: dict of each orbital energies for element; example of input - {'C': {'Es': -8.71, 'Epx': 0,
                         'Epy': 0, ... ; if calculation_type == 'non spin' we have to remember about different spin
                          energies.
-
             number_of_friends: defined by user, number of neighbours of point in lattice
             lp: p-orbital interaction constant in Spin-Orbit interactions, None if calculation_type == 'non spin'
             ld: d-orbital interaction constant in Spin-Orbit interactions, None if calculation_type == 'non spin'
             flat:
-
         Returns: Lists of row, column indices and list of non-zero values
-
         """
 
         if calculation_type == 'non spin':
@@ -169,13 +152,10 @@ class TightBinding(object):
 
         """
         Method converts calculated rows, columns, and non-zero values into sparse matrix.
-
         Args:
             dimension: dimension of Slater Koster matrix
             **kwargs: arguments of __get_non_zero_values_and_indices method
-
         Returns: sparse interaction matrix for all interacting atoms in lattice in csr format
-
         """
 
         columns, rows, values, num = self.__get_non_zero_values_and_indices(**kwargs)
@@ -190,9 +170,7 @@ class TightBinding(object):
         Method constructs lattice of atoms and saves it in form of pd.DataFrame
         Args:
             **kwargs: arguments of construct_skeleton method
-
         Returns: pd.DataFrame with lattice data, and it's shape
-
         """
 
         lattice = self.__construct.construct_skeleton(**kwargs)
@@ -211,9 +189,7 @@ class TightBinding(object):
             which:
             **kwargs: arguments of __create_sparse_matrix method
             sigma
-
         Returns: eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix
-
         """
 
         sparse_matrix = self.__create_sparse_matrix(**kwargs)
@@ -223,16 +199,27 @@ class TightBinding(object):
         return eigenvalues, eigenvectors
 
     @staticmethod
-    def evaluate_density_of_states(En, E, eigenstates):
+    def evaluate_density_of_states(eigenenergies, E):
 
-        a = (np.max(En) - np.min(En)) / len(En)
-        D_E = [np.sum(np.exp(-(En - e)**2 / (2*a**2)) / (np.pi * a * np.sqrt(2))) for e in E]
+        a = (np.max(eigenenergies) - np.min(eigenenergies)) / len(eigenenergies)
+        D_E = [np.sum([np.exp(-(e - eigenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2)) for eigenenergy in eigenenergies]) for e in E]
 
-        eigenstate_En = eigenstates[np.where(En)]
-        D_eigenstate = [np.sum(np.abs(np.dot(eigenstate, eigenstate_En))**2 * np.exp(-(En - e)**2 / (2*a**2)) / (np.pi * a * np.sqrt(2))) for e, eigenstate in zip(E, eigenstates)]
-        D = np.sum(D_eigenstate)
 
-        return D_E, D, D_eigenstate
+        return D_E
+        
+    @staticmethod    
+    def evaluate_projected_density_of_states(eigenenergies, E, eigenstates):
+        
+        N = len(eigenenergies)
+        a = (np.max(eigenenergies) - np.min(eigenenergies)) / N
+        D_projected = []
+        for num in range(N):
+           
+            D_projected.append([np.sum([np.abs(np.dot(np.conj(eigenstates[:, num]), eigenstates[:, np.where(eigenenergy)[0][0]])) * np.exp(-(e - eigenenergy)**2 / (2 * a**2)) / (np.pi * a *np.sqrt(2)) for eigenenergy in eigenenergies]) for e in E])
+                                     
+        #D_projected_sum = np.sum(D_projected)  
+                             
+        return D_projected#, D_projected_sum
 
 
 
@@ -303,7 +290,7 @@ lc = LatticeConstructor()
 lattice, lattice_data_frame_format, dims = tb.construct_lattice(a=1.42,
                                                                 vertical_num_of_atoms=50,
                                                                 horizontal_num_of_atoms=5)
-lc.plot_lattice(lattice)
+#lc.plot_lattice(lattice)
 
 print('Calculation for', str(dims), ' atoms')
 sigma = 0.5
@@ -314,14 +301,13 @@ energy, wave_function = tb.calculate_eigenvalues_ang_eigenvectors(dimension=dims
                                                                   distance=1,
                                                                   constants_of_pairs=constans_of_pairs_example1,
                                                                   atom_store=atom_store_example1,
-                                                                  num_of_eigenvalues=60,
-                                                                  which='BE',
+                                                                  num_of_eigenvalues=300,
+                                                                  which='LM',
                                                                   sigma=sigma)
-E = np.arange(-20, 20, 0.1)
-
+E = np.arange(-300, 300, 0.1)
 # energy = sigma + (1 / energy)
-density_of_states = tb.evaluate_density_of_states(energy[0], E)[0]
-
+density_of_states = tb.evaluate_density_of_states(energy, E)
+#projected_dos = tb.evaluate_projected_density_of_states(energy, E, wave_function)[0]
 
 end = time.time()
 print('Calculation time for ' + str(dims) + ' atoms: ', (end - start) / 60., ' minutes')
@@ -330,3 +316,6 @@ print('Calculation time for ' + str(dims) + ' atoms: ', (end - start) / 60., ' m
 print(energy)
 plt.plot(E, density_of_states)
 plt.show()
+
+#plt.plot(projected_dos[0])
+#plt.show()

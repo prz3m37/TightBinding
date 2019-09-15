@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+# TODO: poprawic lattice maker zeby było to przewidywalne. i bardziej fajne
 
 class LatticeConstructor(object):
 
@@ -120,5 +121,3 @@ class LatticeConstructor(object):
             plt.show()
 
         return
-
-

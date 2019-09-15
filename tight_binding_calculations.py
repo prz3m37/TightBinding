@@ -46,7 +46,7 @@ class TightBinding(object):
         Returns: List of indices of points which are neighbours.
         """
 
-        tree = sn.KDTree(points, leaf_size=2)
+        tree = sn.KDTree(np.array(points), leaf_size=2)
         if method == 'distance':
             close_friends = tree.query_radius(points, r=distance, sort_results=True, return_distance=True)[0]
         else:
@@ -179,14 +179,14 @@ class TightBinding(object):
 
         return lattice, lattice_data_frame_format, shape
 
-    def calculate_eigenvalues_ang_eigenvectors(self, num_of_eigenvalues, which='LM',
+    def calculate_eigenvalues_ang_eigenvectors(self, num_of_eigenvalues: int, which: str='LM',
                                                sigma:float=None, **kwargs) -> (np.array, np.array):
 
         """
         Method calculates eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix.
         Args:
             num_of_eigenvalues: number of eigenvalues to count
-            which:
+            which: type of evalueted eigenvalues.
             **kwargs: arguments of __create_sparse_matrix method
             sigma
         Returns: eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix
@@ -199,27 +199,45 @@ class TightBinding(object):
         return eigenvalues, eigenvectors
 
     @staticmethod
-    def evaluate_density_of_states(eigenenergies, E):
+    def evaluate_density_of_states(eigenenergies:np.array, E:np.array) -> (list):
+        """
+        Method calculates density of states. Delta function is approximated by Gauss function.
+        Args:
+            eigenenergies: eigenvalues of interaction matrix
+            E: list of arguments
+        Returns: Density of states
+        """
 
+        print('Calculating density of states')
+        
         a = (np.max(eigenenergies) - np.min(eigenenergies)) / len(eigenenergies)
-        D_E = [np.sum([np.exp(-(e - eigenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2)) for eigenenergy in eigenenergies]) for e in E]
+        D_E = [np.sum([np.exp(-(e - eigenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
+         for eigenenergy in eigenenergies]) for e in E]
 
 
         return D_E
-        
-    @staticmethod    
-    def evaluate_projected_density_of_states(eigenenergies, E, eigenstates):
-        
+
+    @staticmethod
+    def evaluate_projected_density_of_states(eigenenergies:np.array, E:np.array, eigenstates:np.array) -> (list):
+        """
+        Method calculates projected density of states
+        Args:
+            eigenenergies: eigenvalues of interaction matrix
+            E: list of arguments
+            eigenstates:  eigenvectors of interaction matrix
+        Returns: Projected density of states
+        """
+
         N = len(eigenenergies)
         a = (np.max(eigenenergies) - np.min(eigenenergies)) / N
         D_projected = []
         for num in range(N):
-           
-            D_projected.append([np.sum([np.abs(np.dot(np.conj(eigenstates[:, num]), eigenstates[:, np.where(eigenenergy)[0][0]])) * np.exp(-(e - eigenenergy)**2 / (2 * a**2)) / (np.pi * a *np.sqrt(2)) for eigenenergy in eigenenergies]) for e in E])
-                                     
-        #D_projected_sum = np.sum(D_projected)  
-                             
-        return D_projected#, D_projected_sum
+            D_projected.append([np.sum([np.abs(np.dot(np.conj(eigenstates[:, num]),
+            eigenstates[:, np.where(eigenenergy)[0][0]]))
+            * np.exp(-(e - eigenenergy)**2 / (2 * a**2)) / (np.pi * a *np.sqrt(2))
+             for eigenenergy in eigenenergies]) for e in E])
+
+        return D_projected
 
 
 
@@ -288,7 +306,7 @@ start = time.time()
 tb = TightBinding()
 lc = LatticeConstructor()
 lattice, lattice_data_frame_format, dims = tb.construct_lattice(a=1.42,
-                                                                vertical_num_of_atoms=50,
+                                                                vertical_num_of_atoms=200,
                                                                 horizontal_num_of_atoms=5)
 #lc.plot_lattice(lattice)
 
@@ -301,10 +319,9 @@ energy, wave_function = tb.calculate_eigenvalues_ang_eigenvectors(dimension=dims
                                                                   distance=1,
                                                                   constants_of_pairs=constans_of_pairs_example1,
                                                                   atom_store=atom_store_example1,
-                                                                  num_of_eigenvalues=300,
-                                                                  which='LM',
-                                                                  sigma=sigma)
-E = np.arange(-300, 300, 0.1)
+                                                                  num_of_eigenvalues=2000,
+                                                                  which='BE')
+E = np.arange(-30, 30, 0.1)
 # energy = sigma + (1 / energy)
 density_of_states = tb.evaluate_density_of_states(energy, E)
 #projected_dos = tb.evaluate_projected_density_of_states(energy, E, wave_function)[0]
@@ -313,9 +330,5 @@ end = time.time()
 print('Calculation time for ' + str(dims) + ' atoms: ', (end - start) / 60., ' minutes')
 
 
-print(energy)
 plt.plot(E, density_of_states)
 plt.show()
-
-#plt.plot(projected_dos[0])
-#plt.show()

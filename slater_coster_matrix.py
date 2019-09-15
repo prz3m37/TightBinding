@@ -6,7 +6,6 @@ class SlaterKoster(object):
     """
     SlaterKoster class calculates Slater Koster matrix which describes interactions between two atoms in lattice.
         User can define whether interactions wants to take Spin Orbit interaction into consideration.
-
     """
 
     @staticmethod
@@ -17,9 +16,7 @@ class SlaterKoster(object):
         Args:
             atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
-
         Returns: dict  dict with physical constants (energies of bands) of atoms in lattice
-
         """
 
         if atom_store is None:
@@ -30,7 +27,7 @@ class SlaterKoster(object):
         return atom
 
     @staticmethod
-    def __get_interaction_constans(constants: dict, atom_i_type: str, atom_j_type: str) -> (dict, None):
+    def __get_interaction_constants(constants: dict, atom_i_type: str, atom_j_type: str) -> (dict, None):
 
         """
         Method returns dictionary with interaction constants.
@@ -38,9 +35,7 @@ class SlaterKoster(object):
             constants: interaction constants
             atom_i_type: type of element interacting atom on i-th position
             atom_j_type: type of element interacting atom on j-th position
-
         Returns: dictionary with interaction constants or None if constants == None
-
         """
 
         if constants is None:
@@ -71,11 +66,8 @@ class SlaterKoster(object):
         Args:
             ri: position of i-th atom in lattice
             rj: position of j-th atom in lattice
-
         Returns: directional cosines
-
         """
-
         r_diff = ri - rj
         r_diff_mod = np.linalg.norm(ri - rj)
 
@@ -83,7 +75,7 @@ class SlaterKoster(object):
         return n
 
     def __calculate_slayterkoster_matrix(self, ri: int, rj: int,
-     constants_of_pairs: dict, atom_i_type: str, atom_j_type: str, flat: bool) -> np.matrix:
+                                         constants_of_pairs: dict, atom_i_type: str, atom_j_type: str, flat: bool) -> np.matrix:
 
         """
         Method calculates Slater-Koster matrix (10x10)
@@ -94,14 +86,12 @@ class SlaterKoster(object):
             atom_i_type: type of element i-th atom
             atom_j_type: type of element i-th atom
             flat: bool type;
-
         Returns: Slater-Koster matrix
-
         """
 
         H_SK = np.zeros((10, 10))
         n = self.__get_directional_cosines(ri, rj)
-        integral_const_of_atom = self.__get_interaction_constans(constants_of_pairs, atom_i_type, atom_j_type)
+        integral_const_of_atom = self.__get_interaction_constants(constants_of_pairs, atom_i_type, atom_j_type)
 
         Vsss = integral_const_of_atom['V_sssigma']
         Vsps = integral_const_of_atom['V_spsigma']
@@ -275,20 +265,19 @@ class SlaterKoster(object):
 
         return np.matrix(H_SK)
 
-    def __spin_orbit_hamiltonian(self, atom_store: dict, atom_type: str, lp: float, ld: float, sgn: float, sigma: str) -> np.matrix:
+    def __spin_orbit_hamiltonian(self, atom_store: dict, atom_type: str, lp: float, ld: float, sgn: (float, None),
+                                 sigma: str) -> np.matrix:
 
         """
-        Method calculates matrix of band energies for spin-orbit interactions
+        Method calculates diagonal matrix of band energies for spin-orbit interactions
         Args:
             atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
             lp: p-band interaction constant for spin-orbit interactions
             ld: d-band interaction constant for spin-orbit interactions
-            sgn: spin signe
+            sgn: spin sign
             sigma: spin
-
         Returns: Slater-Koster matrix for spin-orbit interactions
-
         """
 
         H_SK = np.zeros((10, 10), complex)
@@ -473,9 +462,7 @@ class SlaterKoster(object):
         Args:
             atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
-
         Returns: diagonal matrix of band energies
-
         """
 
         atom_parameters = self.get_atom_type(atom_store, atom_type)
@@ -504,21 +491,22 @@ class SlaterKoster(object):
         return H_Rii
 
     def calculate_spin_mixing_sk(self, calculation_type: str, ri: np.array,
-     rj : np.array, constants_of_pairs: dict, atom_i: str, atom_j: str, flat: bool) -> np.matrix:
+                                 rj: np.array, constants_of_pairs: dict, atom_i: str, atom_j: str,
+                                 flat: bool)->np.matrix:
 
         """
+        Method returns interaction matrix of required shape. If calculation_type is 'non spin' then Slater Koster matrix
+            is 10x10, else 20x20 (because of spin-orbit interactions)
 
         Args:
-            calculation_type:
-            ri:
-            rj:
-            constants_of_pairs:
-            atom_i:
-            atom_j:
-            flat:
-
-        Returns:
-
+            calculation_type: If calculation_type is 'non spin' then Slater Koster matrix is 10x10, else 20x20.
+            ri: position of i-th atom in lattice
+            rj: position of i-th atom in lattice
+            constants_of_pairs: dictionary with interaction constants
+            atom_i: type of element of i-th atom in lattice
+            atom_j: type of element of j-th atom in lattice
+            flat: bool
+        Returns: Slater Koster matrix of required dimension
         """
 
         if calculation_type == 'non spin':
@@ -534,19 +522,18 @@ class SlaterKoster(object):
 
         return the_chosen_one
 
-    def calculate_spin_mixing_diagonal(self, calculation_type: str, atom_store: dict, atom_type: str, lp: float, ld: float) -> np.matrix:
+    def calculate_spin_mixing_diagonal(self, calculation_type: str, atom_store: dict, atom_type: str, lp: float,
+                                       ld: float) -> np.matrix:
 
         """
-
         Args:
-            calculation_type:
-            atom_store:
-            atom_type:
-            lp:
-            ld:
-
+            calculation_type: If calculation_type is 'non spin' then diagonal matrix with band energies
+            is 10x10, else 20x20 (because of spin-orbit interactions)
+            atom_store: dict with physical constants (energies of bands) of atoms in lattice
+            atom_type: type of element (for example 'C')
+            lp: p-band interaction constant for spin-orbit interactions
+            ld: d-band interaction constant for spin-orbit interactions
         Returns:
-
         """
 
         if calculation_type == 'non spin':

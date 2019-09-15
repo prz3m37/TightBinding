@@ -29,7 +29,7 @@ class TightBinding(object):
         Method calls SlaterKoster and  LatticeConstructor class
         """
         self.__slater_coster = SlaterKoster()
-        self.__construct = LatticeConstructor()
+        self.__lattice_constructor = LatticeConstructor()
 
     @staticmethod
     def __get_closest_friends(points: list, method: str, number_of_friends: int = None, distance: float = None) -> list:
@@ -164,17 +164,24 @@ class TightBinding(object):
 
         return matrix_final
 
-    def construct_lattice(self, **kwargs) -> (pd.DataFrame, int):
+    def construct_lattice(self, defects: bool = False, number_of_defects: (int, bool) = None,
+                          **kwargs) -> (pd.DataFrame, int):
 
         """
         Method constructs lattice of atoms and saves it in form of pd.DataFrame
         Args:
             **kwargs: arguments of construct_skeleton method
+            defects:
+            number_of_defects:
         Returns: pd.DataFrame with lattice data, and it's shape
         """
 
-        lattice = self.__construct.construct_skeleton(**kwargs)
-        lattice_data_frame_format = self.__construct.dump_to_dframe(lattice)
+        lattice = self.__lattice_constructor.construct_skeleton(**kwargs)
+
+        if defects == True:
+            lattice = self.__lattice_constructor.add_defects(lattice, number_of_defects)
+
+        lattice_data_frame_format = self.__lattice_constructor.dump_to_dframe(lattice)
         shape = int(lattice.shape[0])
 
         return lattice, lattice_data_frame_format, shape
@@ -199,7 +206,7 @@ class TightBinding(object):
         return eigenvalues, eigenvectors
 
     @staticmethod
-    def evaluate_density_of_states(eigenenergies:np.array, E:np.array) -> (list):
+    def evaluate_density_of_states(eigenenergies:np.array, E:np.array) -> list:
         """
         Method calculates density of states. Delta function is approximated by Gauss function.
         Args:
@@ -209,16 +216,16 @@ class TightBinding(object):
         """
 
         print('Calculating density of states')
-        
+
         a = (np.max(eigenenergies) - np.min(eigenenergies)) / len(eigenenergies)
-        D_E = [np.sum([np.exp(-(e - eigenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
-         for eigenenergy in eigenenergies]) for e in E]
+        D_E = [np.sum([np.exp(-(e - eigenenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
+                       for eigenenenergy in eigenenergies]) for e in E]
 
 
         return D_E
 
     @staticmethod
-    def evaluate_projected_density_of_states(eigenenergies:np.array, E:np.array, eigenstates:np.array) -> (list):
+    def evaluate_projected_density_of_states(eigenenergies:np.array, E:np.array, eigenstates:np.array) -> list:
         """
         Method calculates projected density of states
         Args:
@@ -229,16 +236,15 @@ class TightBinding(object):
         """
 
         N = len(eigenenergies)
-        a = (np.max(eigenenergies) - np.min(eigenenergies)) / N
+        a = (np.max(eigenenergies) - np.min(eigenenergies)) * N
         D_projected = []
         for num in range(N):
             D_projected.append([np.sum([np.abs(np.dot(np.conj(eigenstates[:, num]),
-            eigenstates[:, np.where(eigenenergy)[0][0]]))
-            * np.exp(-(e - eigenenergy)**2 / (2 * a**2)) / (np.pi * a *np.sqrt(2))
-             for eigenenergy in eigenenergies]) for e in E])
+                                                      eigenstates[:, np.where(eigenenenergy)[0][0]]))
+                                        * np.exp(-(e - eigenenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
+                                        for eigenenenergy in eigenenergies]) for e in E])
 
         return D_projected
-
 
 
 atom_store_example1 = {'C': {'Es': -8.7,
@@ -305,30 +311,29 @@ constans_of_pairs_example1 = {('C', 'C'): {'V_sssigma': -6.7,
 start = time.time()
 tb = TightBinding()
 lc = LatticeConstructor()
-lattice, lattice_data_frame_format, dims = tb.construct_lattice(a=1.42,
-                                                                vertical_num_of_atoms=200,
-                                                                horizontal_num_of_atoms=5)
-#lc.plot_lattice(lattice)
+vertical_num_of_steps = 1
+horizontal_num_of_steps = 6
+lattice, lattice_df_format, dims = tb.construct_lattice(a=1.42,
+                                                        vertical_num_of_steps=vertical_num_of_steps,
+                                                        horizontal_num_of_steps=horizontal_num_of_steps)
+lc.plot_lattice(lattice)
+print('Calculation for', str(dims), 'atoms')
+# print(2 * vertical_num_of_steps * (2 * horizontal_num_of_steps + 1))
 
-print('Calculation for', str(dims), ' atoms')
-sigma = 0.5
 energy, wave_function = tb.calculate_eigenvalues_ang_eigenvectors(dimension=dims,
-                                                                  data=lattice_data_frame_format,
+                                                                  data=lattice_df_format,
                                                                   calculation_type='non spin',
                                                                   method='distance',
                                                                   distance=1,
                                                                   constants_of_pairs=constans_of_pairs_example1,
                                                                   atom_store=atom_store_example1,
-                                                                  num_of_eigenvalues=2000,
-                                                                  which='BE')
-E = np.arange(-30, 30, 0.1)
-# energy = sigma + (1 / energy)
+                                                                  num_of_eigenvalues=259,
+                                                                  which='SM')
+E = np.arange(-20, 20, 0.01)
 density_of_states = tb.evaluate_density_of_states(energy, E)
-#projected_dos = tb.evaluate_projected_density_of_states(energy, E, wave_function)[0]
-
 end = time.time()
 print('Calculation time for ' + str(dims) + ' atoms: ', (end - start) / 60., ' minutes')
 
 
-plt.plot(E, density_of_states)
+plt.plot(E, density_of_states, '-o')
 plt.show()

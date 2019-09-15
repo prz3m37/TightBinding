@@ -216,8 +216,8 @@ class TightBinding(object):
         """
 
         print('Calculating density of states')
-
-        a = (np.max(eigenenergies) - np.min(eigenenergies)) / len(eigenenergies)
+        N = len(eigenenergies)
+        a = (np.max(eigenenergies) - np.min(eigenenergies)) * N
         D_E = [np.sum([np.exp(-(e - eigenenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
                        for eigenenenergy in eigenenergies]) for e in E]
 
@@ -236,7 +236,7 @@ class TightBinding(object):
         """
 
         N = len(eigenenergies)
-        a = (np.max(eigenenergies) - np.min(eigenenergies)) * N
+        (np.max(eigenenergies) - np.min(eigenenergies)) / len(eigenenergies)
         D_projected = []
         for num in range(N):
             D_projected.append([np.sum([np.abs(np.dot(np.conj(eigenstates[:, num]),

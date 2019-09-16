@@ -51,6 +51,7 @@ class TightBinding(object):
             close_friends = tree.query_radius(points, r=distance, sort_results=True, return_distance=True)[0]
         else:
             close_friends = tree.query(points, k=number_of_friends)[1]
+
         return close_friends
 
     def __get_non_zero_values_and_indices(self, data, calculation_type, method, distance, constants_of_pairs,
@@ -96,7 +97,6 @@ class TightBinding(object):
         rows = []
         values = []
         for friends in close_friends:
-
             host = friends[0]
             type_of_host = data['type_of_atom'].iloc[host]
             h_diagonal = self.__slater_coster.calculate_spin_mixing_diagonal(calculation_type,
@@ -187,7 +187,7 @@ class TightBinding(object):
         return lattice, lattice_data_frame_format, shape
 
     def calculate_eigenvalues_ang_eigenvectors(self, num_of_eigenvalues: int, which: str='LM',
-                                               sigma:float=None, **kwargs) -> (np.array, np.array):
+                                               sigma: float=None, **kwargs) -> (np.array, np.array):
 
         """
         Method calculates eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix.
@@ -217,10 +217,13 @@ class TightBinding(object):
 
         print('Calculating density of states')
         N = len(eigenenergies)
-        a = (np.max(eigenenergies) - np.min(eigenenergies)) * N
-        D_E = [np.sum([np.exp(-(e - eigenenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
-                       for eigenenenergy in eigenenergies]) for e in E]
+        a = (np.max(eigenenergies) - np.min(eigenenergies)) / N
 
+        D_E = 0
+        for eigenenergy in eigenenergies:
+            # if np.abs(E - eigenenergy) < 6 * a:
+            print(eigenenergy)
+            D_E = D_E + np.exp(-(E - eigenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
 
         return D_E
 
@@ -236,13 +239,12 @@ class TightBinding(object):
         """
 
         N = len(eigenenergies)
-        (np.max(eigenenergies) - np.min(eigenenergies)) / len(eigenenergies)
-        D_projected = []
-        for num in range(N):
-            D_projected.append([np.sum([np.abs(np.dot(np.conj(eigenstates[:, num]),
-                                                      eigenstates[:, np.where(eigenenenergy)[0][0]]))
-                                        * np.exp(-(e - eigenenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
-                                        for eigenenenergy in eigenenergies]) for e in E])
+        a = (np.max(eigenenergies) - np.min(eigenenergies)) / N
+        D_projected = 0
+        for num, eigenenergy in enumerate(eigenenergies):
+            D_projected = D_projected + np.abs(np.dot(np.conj(eigenstates[:, num]),
+                                                      eigenstates[:, np.where(eigenenergy)[0][0]]))\
+                          * np.exp(-(E - eigenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
 
         return D_projected
 
@@ -311,29 +313,36 @@ constans_of_pairs_example1 = {('C', 'C'): {'V_sssigma': -6.7,
 start = time.time()
 tb = TightBinding()
 lc = LatticeConstructor()
-vertical_num_of_steps = 1
-horizontal_num_of_steps = 6
-lattice, lattice_df_format, dims = tb.construct_lattice(a=1.42,
+vertical_num_of_steps = 10
+horizontal_num_of_steps = 125
+distance = 1
+lattice, lattice_df_format, dims = tb.construct_lattice(a=distance,
                                                         vertical_num_of_steps=vertical_num_of_steps,
                                                         horizontal_num_of_steps=horizontal_num_of_steps)
+
+
 lc.plot_lattice(lattice)
 print('Calculation for', str(dims), 'atoms')
 # print(2 * vertical_num_of_steps * (2 * horizontal_num_of_steps + 1))
-
+sgm = 100
 energy, wave_function = tb.calculate_eigenvalues_ang_eigenvectors(dimension=dims,
                                                                   data=lattice_df_format,
                                                                   calculation_type='non spin',
                                                                   method='distance',
-                                                                  distance=1,
+                                                                  distance=distance,
                                                                   constants_of_pairs=constans_of_pairs_example1,
                                                                   atom_store=atom_store_example1,
-                                                                  num_of_eigenvalues=259,
-                                                                  which='SM')
-E = np.arange(-20, 20, 0.01)
+                                                                  num_of_eigenvalues=500,
+                                                                  which='LM',
+                                                                  sigma=sgm)
+E = np.arange(10.1, 10.9, 0.001)
 density_of_states = tb.evaluate_density_of_states(energy, E)
+# projected_density_of_states = tb.evaluate_projected_density_of_states(energy, E, wave_function)
 end = time.time()
 print('Calculation time for ' + str(dims) + ' atoms: ', (end - start) / 60., ' minutes')
 
-
-plt.plot(E, density_of_states, '-o')
+plt.plot(E, density_of_states, '-o', markersize=1.5)
 plt.show()
+
+# plt.plot(E, projected_density_of_states, '-o', markersize=1.5)
+# plt.show()

@@ -7,6 +7,7 @@ from scipy.sparse.linalg import eigsh
 import sklearn.neighbors as sn
 import time
 import matplotlib.pyplot as plt
+import gc
 
 
 class TightBinding(object):
@@ -195,34 +196,35 @@ class TightBinding(object):
             num_of_eigenvalues: number of eigenvalues to count
             which: type of evalueted eigenvalues.
             **kwargs: arguments of __create_sparse_matrix method
-            sigma
+            sigma: shift-invert parameter
         Returns: eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix
         """
 
         sparse_matrix = self.__create_sparse_matrix(**kwargs)
         print('Eigenvalues calculating')
-        eigenvalues, eigenvectors = eigsh(sparse_matrix, k=num_of_eigenvalues, which=which, sigma=sigma, mode='normal')
+        eigenvalues, eigenvectors = eigsh(sparse_matrix, k=num_of_eigenvalues, which=which, sigma=sigma, mode='normal', ncv  = 12000)
 
         return eigenvalues, eigenvectors
 
     @staticmethod
-    def evaluate_density_of_states(eigenenergies:np.array, E:np.array) -> list:
+    def evaluate_density_of_states(eigenenergies:np.array, E:np.array, a:float) -> list:
         """
         Method calculates density of states. Delta function is approximated by Gauss function.
         Args:
             eigenenergies: eigenvalues of interaction matrix
             E: list of arguments
+            a: Gauss function widtth
+		
         Returns: Density of states
         """
 
         print('Calculating density of states')
         N = len(eigenenergies)
-        a = (np.max(eigenenergies) - np.min(eigenenergies)) / N
-
+        #a = (np.max(eigenenergies) - np.min(eigenenergies)) / N
         D_E = 0
+        #with open("graphene_values_" + str(a) +".txt", "w") as file:
         for eigenenergy in eigenenergies:
-            # if np.abs(E - eigenenergy) < 6 * a:
-            print(eigenenergy)
+            #file.write(str(eigenenergy) +  "\n")
             D_E = D_E + np.exp(-(E - eigenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
 
         return D_E
@@ -248,19 +250,7 @@ class TightBinding(object):
 
         return D_projected
 
-
-atom_store_example1 = {'C': {'Es': -8.7,
-                             'Epx': 0,
-                             'Epy': 0,
-                             'Epz': 0,
-                             'Edz2': 0,
-                             'Edxz': 0,
-                             'Edyz': 0,
-                             'Edxy': 0,
-                             'Edx2y2': 0,
-                             'Estar': 0}}
-
-atom_store_example3 = {'C': {'Es up up': 1,
+atom_store_example_so1 = {'C': {'Es up up': 1,
                              'Epx up up': 1.,
                              'Epy up up': 1,
                              'Epz up up': 1,
@@ -292,30 +282,44 @@ mapping_system = pd.DataFrame({'number_of_atom': [0, 1, 2, 3, 4, 5],
                                                 np.array([np.sqrt(3)/2, 0.5, 0])]})
 
 
-constans_of_pairs_example1 = {('C', 'C'): {'V_sssigma': -6.7,
-                                           'V_spsigma': 5.5,
-                                           'V_sdsigma': 0,
-                                           'V_starssigma': 0,
-                                           'V_starpsigma': 0,
-                                           'V_stardsigma': 0,
-                                           'V_ppsigma': 5.1,
-                                           'V_pppi': -3.1,
-                                           'V_pdsigma': 0,
-                                           'V_pdpi': 0,
-                                           'V_ddsigma': 0,
-                                           'V_ddpi': 0,
-                                           'V_ddd': 0}}
+                                           
+atom_store_example = {'C': {'Es': -50.,
+                             'Epx': -50.,
+                             'Epy': -50.,
+                             'Epz': 0.,
+                             'Edz2': 400.,
+                             'Edxz': 400.,
+                             'Edyz': 400.,
+                             'Edxy': 400.,
+                             'Edx2y2': 400.,
+                             'Estar': 400.}}   
+                                           
 
-# TODO taśma grafenowa idealna , a potem robie dziury, parametryzacja dla grafenu zapytac google tight binding. gdy nie mam atomu potencjał bardzo duzy sprawdzenie on site energies bardzo duze -  wygenerowac
-# TODO 5000 tys atomów
-
+constans_of_pairs_example = {('C', 'C'): {'V_sssigma': 0.,
+                                           'V_spsigma': 0.,
+                                           'V_sdsigma': 0.,
+                                           'V_starssigma': 0.,
+                                           'V_starpsigma': 0.,
+                                           'V_stardsigma': 0.,
+                                           'V_ppsigma': 0.,
+                                           'V_pppi': -2.6,
+                                           'V_pdsigma': 0.,
+                                           'V_pdpi': 0.,
+                                           'V_ddsigma': 0.,
+                                           'V_ddpi': 0.,
+                                           'V_ddd': 0.}}  
+                                           
+                                                                                
+# TODO Znaleźć przykład z paskami grafenowymi physical rev b volume 77 193-410 2008 rok
 
 start = time.time()
 tb = TightBinding()
 lc = LatticeConstructor()
-vertical_num_of_steps = 10
-horizontal_num_of_steps = 125
-distance = 1
+vertical_num_of_steps = 1
+horizontal_num_of_steps = 2
+distance = 1.
+
+E = np.arange(-7, 7, 0.001)	
 lattice, lattice_df_format, dims = tb.construct_lattice(a=distance,
                                                         vertical_num_of_steps=vertical_num_of_steps,
                                                         horizontal_num_of_steps=horizontal_num_of_steps)
@@ -323,26 +327,24 @@ lattice, lattice_df_format, dims = tb.construct_lattice(a=distance,
 
 lc.plot_lattice(lattice)
 print('Calculation for', str(dims), 'atoms')
-# print(2 * vertical_num_of_steps * (2 * horizontal_num_of_steps + 1))
-sgm = 100
+#try:
+'''                                                                 
 energy, wave_function = tb.calculate_eigenvalues_ang_eigenvectors(dimension=dims,
                                                                   data=lattice_df_format,
                                                                   calculation_type='non spin',
                                                                   method='distance',
                                                                   distance=distance,
-                                                                  constants_of_pairs=constans_of_pairs_example1,
-                                                                  atom_store=atom_store_example1,
-                                                                  num_of_eigenvalues=500,
-                                                                  which='LM',
-                                                                  sigma=sgm)
-E = np.arange(10.1, 10.9, 0.001)
-density_of_states = tb.evaluate_density_of_states(energy, E)
-# projected_density_of_states = tb.evaluate_projected_density_of_states(energy, E, wave_function)
-end = time.time()
-print('Calculation time for ' + str(dims) + ' atoms: ', (end - start) / 60., ' minutes')
+                                                                  constants_of_pairs=constans_of_pairs_example,
+                                                                  atom_store=atom_store_example,
+                                                                  num_of_eigenvalues=59, sigma=0.001,
+                                                                  which='LM')                                                                  
 
-plt.plot(E, density_of_states, '-o', markersize=1.5)
+density_of_states = tb.evaluate_density_of_states(energy, E, a=0.1)
+print(energy)
+end = time.time()
+
+print('Calculation time for ' + str(dims) + ' atoms: ', (end - start) / 60., ' minutes')
+plt.plot(E, density_of_states)
 plt.show()
 
-# plt.plot(E, projected_density_of_states, '-o', markersize=1.5)
-# plt.show()
+'''

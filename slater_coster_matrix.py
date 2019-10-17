@@ -12,11 +12,13 @@ class SlaterKoster(object):
     def get_atom_type(atom_store: dict, atom_type: str) -> (dict, None):
 
         """
+
         Method passes dictionary of physical constants of atoms in lattice
         Args:
             atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
         Returns: dict  dict with physical constants (energies of bands) of atoms in lattice
+
         """
 
         if atom_store is None:

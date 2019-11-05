@@ -4,8 +4,8 @@ import numpy as np
 class SlaterKoster(object):
 
     """
-    SlaterKoster class calculates Slater Koster matrix which describes interactions between two atoms in lattice.
-        User can define whether interactions wants to take Spin Orbit interaction into consideration.
+    SlaterKoster class calculates Slater-Koster matrix which describes interactions between two atoms in lattice.
+        User can define whether wants to take Spin Orbit interaction into consideration or not.
     """
 
     @staticmethod
@@ -30,7 +30,8 @@ class SlaterKoster(object):
     def __get_interaction_constants(constants: dict, atom_i_type: str, atom_j_type: str) -> (dict, None):
 
         """
-        Method returns dictionary with interaction constants.
+        Method returns dictionary with interaction constants. If constants are None,
+            then all constants are equal to zero
         Args:
             constants: interaction constants
             atom_i_type: type of element interacting atom on i-th position
@@ -75,17 +76,16 @@ class SlaterKoster(object):
         return n
 
     def __calculate_slayterkoster_matrix(self, ri: int, rj: int,
-                                         constants_of_pairs: dict, atom_i_type: str, atom_j_type: str, flat: bool) -> np.matrix:
+                                         constants_of_pairs: dict, atom_i_type: str, atom_j_type: str) -> np.matrix:
 
         """
-        Method calculates Slater-Koster matrix (10x10)
+        Method calculates Slater-Koster matrix (dimension: 10x10)
         Args:
             ri: position of i-th atom in lattice
             rj: position of j-th atom in lattice
             constants_of_pairs: dictionary with interaction constants
             atom_i_type: type of element i-th atom
-            atom_j_type: type of element i-th atom
-            flat: bool type;
+            atom_j_type: type of element j-th atom
         Returns: Slater-Koster matrix
         """
 
@@ -107,6 +107,7 @@ class SlaterKoster(object):
         Vddp = integral_const_of_atom['V_ddpi']
         Vddd = integral_const_of_atom['V_ddd']
 
+        # ORDER OF MATRIX (little cheat sheet)
         # [0, 1,  2,  3,  4,   5,    6,    7,     8,  9]
         # [s, px, py, pz, dxy, dyz, dxz, dx2dy2, dz2, s*]
 
@@ -410,7 +411,7 @@ class SlaterKoster(object):
                 H_SK[8][8] = 0
 
                 H_SK[9][9] = 0
-            
+
             new_order = [0, 1, 2, 3, 4, 5, 7, 8, 6, 9]
             H_SK = H_SK[:, new_order]
             
@@ -474,11 +475,10 @@ class SlaterKoster(object):
 
         if calculation_type == 'non spin':
 
-            the_chosen_one = np.matrix(self.__calculate_slayterkoster_matrix(ri, rj, constants_of_pairs, atom_i, atom_j,
-                                                                             flat))
+            the_chosen_one = np.matrix(self.__calculate_slayterkoster_matrix(ri, rj, constants_of_pairs, atom_i, atom_j))
         else:
 
-            equal_spin_matrix = self.__calculate_slayterkoster_matrix(ri, rj, constants_of_pairs, atom_i, atom_j, flat)
+            equal_spin_matrix = self.__calculate_slayterkoster_matrix(ri, rj, constants_of_pairs, atom_i, atom_j)
 
             the_chosen_one = np.bmat([[equal_spin_matrix if i != j else np.zeros((10, 10))
                                        for i in range(2)] for j in range(2)])
@@ -489,6 +489,8 @@ class SlaterKoster(object):
                                        ld: float) -> np.matrix:
 
         """
+        Method returns matrix of diagonal energies of required shape. If calculation_type is 'non spin' then
+            diagonal matrix is 10x10, else 20x20 (because of spin-orbit interactions).
         Args:
             calculation_type: If calculation_type is 'non spin' then diagonal matrix with band energies
             is 10x10, else 20x20 (because of spin-orbit interactions)

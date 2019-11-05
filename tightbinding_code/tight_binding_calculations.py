@@ -108,12 +108,6 @@ class TightBinding(object):
             h_diagonal_rows = h_diagonal_non_zero_indices[0] + int(host * num)
             h_diagonal_columns = h_diagonal_non_zero_indices[1] + int(host * num)
 
-            #print(h_diagonal_non_zero_indices)
-            #print(host)
-            #print(h_diagonal_rows)
-            #print(h_diagonal_columns)
-            #print()
-
             columns.append(h_diagonal_columns)
             rows.append(h_diagonal_rows)
             values.append(h_diagonal_non_zero_values)
@@ -138,22 +132,14 @@ class TightBinding(object):
                     h_sk_rows = h_sk_non_zero_indices[0] + int(host * num)
                     h_sk_columns = h_sk_non_zero_indices[1] + int(friend * num)
 
-                    #print('friends', host, friend)
-                    #print(h_sk_rows)
-                    #print(h_sk_columns)
-                    #print(h_sk_non_zero_values)
-                    #print()
-
-
                     columns.append(h_sk_columns)
                     rows.append(h_sk_rows)
                     values.append(h_sk_non_zero_values)
 
-            #print(friends)
         columns = np.concatenate(columns)
         rows = np.concatenate(rows)
         values = np.concatenate(values)
-        print('Matrix calculated')
+        print('                 ____________________MATRIX CALCULATED____________________\n')
         
         return columns, rows, values, num
 
@@ -182,42 +168,44 @@ class TightBinding(object):
             num_of_eigenvalues: number of eigenvalues to count
             which: type of evalueted eigenvalues.
             **kwargs: arguments of __create_sparse_matrix method
-            sigma: shift-invert parameter
+            sigma: shift-invert parameter (in fact this can be interpreted as Fermi energy level)
         Returns: eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix
         """
 
         sparse_matrix = self.__create_sparse_matrix(**kwargs)
-        print('Eigenvalues calculating from matrix of shape: ', sparse_matrix.shape)
+        print(' ______________Eigenvalues calculating from matrix of shape: ', sparse_matrix.shape, '______________\n')
         eigenvalues, eigenvectors = eigsh(sparse_matrix, k=num_of_eigenvalues, which=which, sigma=sigma, mode='normal', ncv = lanczos_vectors)
 
         return eigenvalues, eigenvectors
 
     @staticmethod
-    def evaluate_density_of_states(eigenenergies:np.array, E:np.array, a:float) -> list:
+    def evaluate_density_of_states(eigenenergies:np.array, E:np.array, gauss_width:float) -> list:
         """
         Method calculates density of states. Delta function is approximated by Gauss function.
         Args:
             eigenenergies: eigenvalues of interaction matrix
             E: list of arguments
-            a: Gauss function widtth
-		
+            gauss_width:
         Returns: Density of states
         """
 
-        print('Calculating density of states')
         D_E = 0
         for eigenenergy in eigenenergies:
-            D_E = D_E + np.exp(-(E - eigenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
+            D_E = D_E + np.exp(-(E - eigenenergy)**2 / (2 * gauss_width**2)) / (np.pi * gauss_width * np.sqrt(2))
+        print('       ____________________DOS_CALCULATED____________________\n')
         return D_E
 
     @staticmethod
-    def evaluate_projected_density_of_states(eigenenergies:np.array, E:np.array, eigenstates:np.array) -> list:
+    def evaluate_projected_density_of_states(eigenenergies:np.array, E:np.array, eigenstates:np.array,
+                                             gauss_width:float) -> list:
+
         """
         Method calculates projected density of states
         Args:
             eigenenergies: eigenvalues of interaction matrix
             E: list of arguments
-            eigenstates:  eigenvectors of interaction matrix
+            eigenstates: eigenvectors of interaction matrix
+            gauss_width: Gauss function width
         Returns: Projected density of states
         """
 
@@ -227,6 +215,6 @@ class TightBinding(object):
         for num, eigenenergy in enumerate(eigenenergies):
             D_projected = D_projected + np.abs(np.dot(np.conj(eigenstates[:, num]),
                                                       eigenstates[:, np.where(eigenenergy)[0][0]]))\
-                          * np.exp(-(E - eigenenergy)**2 / (2 * a**2)) / (np.pi * a * np.sqrt(2))
-
+                          * np.exp(-(E - eigenenergy)**2 / (2 * gauss_width**2)) / (np.pi * gauss_width * np.sqrt(2))
+        print('             ____________________PROJECTED_DOS_CALCULATED____________________\n')
         return D_projected

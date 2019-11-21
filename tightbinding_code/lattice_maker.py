@@ -19,9 +19,12 @@ class LatticeConstructor(object):
 
         return direction
 
+
     def construct_skeleton(self, a, vertical_num_of_steps, horizontal_num_of_steps,
                            deformation_func=None, direction=None, start=None, stop=None):
 
+
+        '''
         mother_first_row = [[float(format((-a * np.sqrt(3)/2), '.12g')),float(format( a / 2, '.12g')), 0],
                             [0, float(format( a, '.12g')), 0], 
                             [float(format((a * np.sqrt(3)/2), '.12g')),float(format( a / 2, '.12g')), 0]]
@@ -30,16 +33,29 @@ class LatticeConstructor(object):
                              [0, float(format( -a, '.12g')), 0],
                              [float(format((a * np.sqrt(3)/2), '.12g')),float(format( -a / 2, '.12g')), 0]]
 
+        '''
+        mother_first_row = [[-a * np.sqrt(3)/2, a / 2, 0],
+                            [0, a, 0], 
+                            [a * np.sqrt(3)/2, a / 2, 0]]
+
+        mother_second_row = [[-a * np.sqrt(3)/2, -a / 2, 0],
+                            [0, -a, 0], 
+                            [a * np.sqrt(3)/2, -a / 2, 0]]
+
         mother_first_row = mother_first_row
         mother_second_row = mother_second_row
 
+        '''
         horizontal_shift = np.array([float(format(a * np.sqrt(3), '12g')), 0, 0])
         vertical_shift = np.array([0, float(format(3 * a, '12g')), 0])
+        '''
+        horizontal_shift = np.array([a * np.sqrt(3), 0, 0])
+        vertical_shift = np.array([0, 3 * a, 0])
 
         vertical_steps = int(vertical_num_of_steps)
         horizontal_steps = int(horizontal_num_of_steps)
 
-        horizontal_part_first_row = [mother_first_row +(horizontal_step * horizontal_shift)
+        horizontal_part_first_row = [mother_first_row + (horizontal_step * horizontal_shift)
                                      for horizontal_step in range(0, horizontal_steps)]
 
         horizontal_part_second_row = [mother_second_row + (horizontal_step * horizontal_shift)
@@ -103,7 +119,9 @@ class LatticeConstructor(object):
                 vertical_part_second_row = self.make_deformation(deformation_func, v_part_second_row, start, stop)
 
         lattice = np.concatenate(vertical_part_first_row + vertical_part_second_row)
-
+        #print(len(lattice))
+        #lattice = self.add_defects(lattice, int(len(lattice) * 0.4))
+        #print(len(lattice))
         return lattice
 
     @staticmethod
@@ -122,6 +140,8 @@ class LatticeConstructor(object):
         size = len(lattice)
         final_lattice = pd.DataFrame({'number_of_atom': np.arange(0, size, 1), 'localization': lattice,
                                       'type_of_atom': [type_of_atom] * size})
+
+        #remove_n = int(size * 0.4)
+        #drop_indices = np.random.choice(final_lattice.index, remove_n, replace=False)
+        #final_lattice_dropped = final_lattice.drop(drop_indices)
         return final_lattice
-
-

@@ -1,11 +1,12 @@
-import time
+import sys
+import datetime
 import numpy as np
 import pandas as pd
 import config as cfg
 from hexgrid import HexGrid
+from tight_binding import TightBinding
 from helpers import TightBindingHelpers
 from lattice_maker import LatticeConstructor
-from tight_binding_calculations import TightBinding
 
 
 class ExecuteTightBindingCalculations(object):
@@ -20,12 +21,14 @@ class ExecuteTightBindingCalculations(object):
         Method calls all necessary classes : TightBinding, LatticeConstructor, HexGrid and LatticeConstructor class.
             The last two classes are unnecessary if user will define his lattice (in required format) by himself.
         """
+        sys.path.insert(1, '..')
+        self.parametrization = sys.argv[1]
         self.__hexagonal_lattice = HexGrid()
         self.__tight_binding = TightBinding()
         self.__rectangle_lattice = LatticeConstructor()
-        self.__configuration = cfg.configuration['parametrization']
+        self.__configuration = cfg.configuration[self.parametrization]
 
-    def __call_rectangle_lattice(self, defects: bool = False, number_of_defects: (int, bool) = None, **kwargs)\
+    def __call_rectangle_lattice(self, defects: bool = False, number_of_defects: bool= None, **kwargs)\
             -> (pd.DataFrame, int):
         """
         Method calls method responsible for creating rectangular lattice (LatticeConstructor)
@@ -39,9 +42,9 @@ class ExecuteTightBindingCalculations(object):
         """
         lattice = self.__rectangle_lattice.construct_skeleton(**kwargs)
         if defects == True:
-            lattice = self.__rectangle_lattice.add_defects(lattice, number_of_defects)
+            lattice = self.__rectangle_lattice.add_defects(lattice, int(len(lattice) * 0.4))
         lattice_data_frame_format = self.__rectangle_lattice.dump_to_dframe(lattice)
-        shape = int(lattice.shape[0])
+        shape = int(lattice_data_frame_format.shape[0])
         return lattice, lattice_data_frame_format, shape
 
     def __construct_rectangle_lattice(self)->(list, pd.DataFrame, int):
@@ -188,23 +191,23 @@ def main()->None:
     Returns: None
 
     """
-    print('_________________________________TIGHT_BINDING_CALCULATIONS_________________________________\n')
+    print('_________________________________TIGHT_BINDING_CALCULATIONS__________________________________\n')
     execute = ExecuteTightBindingCalculations()
-    helpers = TightBindingHelpers()
+    helpers = TightBindingHelpers(execute.parametrization)
 
-    start = time.time()
+    start = datetime.datetime.now()
 
     lattice, lattice_df_format, dimension = execute.choose_type_of_lattice()
+    print('________________________________', 'CALCULATION_FOR_', str(dimension), '_ATOMS' ,'________________________________\n')
     energies, wave_function = execute.call_tight_binding_calculation(dimension, lattice_df_format)
     density_of_states = execute.calculate_DOS(energies)
-
-    end = time.time()
-    print('_______________Calculation time for ' + str(dimension) + ' atoms: ', round((end - start)%60., 3), ' minutes_______________\n')
+    end = datetime.datetime.now()
+    print('__________________Calculation time for ' + str(dimension) + ' atoms: ', end - start, ' __________________\n')
     file_name = helpers.get_file_name(dimension)
     helpers.create_saving_folder()
     helpers.save_numerical_results(file_name, energies)
-    helpers.plot_DOS(file_name, density_of_states)
-    helpers.plot_hex_lattice(lattice, file_name)
+    helpers.plot_DOS(file_name, dimension, density_of_states)
+    #helpers.plot_lattice(lattice, dimension, file_name)
     return
 
 

@@ -1,18 +1,31 @@
 import math
+import decimal
 import numpy as np
 import pandas as pd 
 
 class HexGrid():
 
     def generate_middle_strip(self, a, x_num_of_steps):
+        '''
+        num = decimal.Decimal(str(a))
+        decimals = abs(num.as_tuple().exponent)
+        decimals = 12
+        mother_first_row = [[float(format((-a * np.sqrt(3)/2), '.%sg' % (decimals))),float(format( a / 2, '.%sg' % (decimals))), 0],
+                            [0, float(format( a, '.%sg' % (decimals))), 0], 
+                            [float(format((a * np.sqrt(3)/2), '.%sg' % (decimals))),float(format( a / 2, '.%sg' % (decimals))), 0]]
 
-        mother_first_row = [[float(format((-a * np.sqrt(3)/2), '.12g')),float(format( a / 2, '.12g')), 0],
-                            [0, float(format( a, '.12g')), 0], 
-                            [float(format((a * np.sqrt(3)/2), '.12g')),float(format( a / 2, '.12g')), 0]]
+        mother_second_row = [[float(format((-a * np.sqrt(3)/2), '.%sg' % (decimals))),float(format( -a / 2, '.%sg' % (decimals))), 0],
+                             [0, float(format( -a, '.%sg' % (decimals))), 0],
+                             [float(format((a * np.sqrt(3)/2), '.%sg' % (decimals))),float(format( -a / 2, '.%sg' % (decimals))), 0]]
+        '''
 
-        mother_second_row = [[float(format((-a * np.sqrt(3)/2), '.12g')),float(format( -a / 2, '.12g')), 0],
-                             [0, float(format( -a, '.12g')), 0],
-                             [float(format((a * np.sqrt(3)/2), '.12g')),float(format( -a / 2, '.12g')), 0]]
+        mother_first_row = [[-a * np.sqrt(3)/2, a / 2, 0],
+                            [0, a, 0], 
+                            [a * np.sqrt(3)/2, a / 2, 0]]
+
+        mother_second_row = [[-a * np.sqrt(3)/2, -a / 2, 0],
+                            [0, -a, 0], 
+                            [a * np.sqrt(3)/2, -a / 2, 0]]
 
         x_step = np.array([a * np.sqrt(3), 0, 0])
         x_num_of_steps = int(x_num_of_steps)
@@ -49,7 +62,6 @@ class HexGrid():
         
         first_row, second_row = self.generate_middle_strip(a, x_num_of_steps)
         y_step = np.array([0, 3 * a, 0])
-        
         y_num_of_steps = 0
         for num in range(3, x_num_of_steps + 1):
             if num % 2 != 0:
@@ -104,6 +116,10 @@ class HexGrid():
         size = len(lattice)
         final_lattice = pd.DataFrame({'number_of_atom': np.arange(0, size, 1), 'localization': lattice,
                                       'type_of_atom': ['C'] * size})
+
+        #remove_n = int(size * 0.4)
+        #drop_indices = np.random.choice(final_lattice.index, remove_n, replace=False)
+        #final_lattice_dropped = final_lattice.drop(drop_indices)
         return final_lattice
         
 

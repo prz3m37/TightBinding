@@ -16,7 +16,9 @@ class TightBindingHelpers(object):
         """
         Method calls configuration file (named config.py)
         """
+        self.__settings = cfg.settings
         self.__configuration = cfg.configuration[parametrization]
+
 
     def create_saving_folder(self)->None:
         """
@@ -25,7 +27,7 @@ class TightBindingHelpers(object):
         Returns: None
 
         """
-        directory = self.__configuration['saving_directory']
+        directory = self.__settings['saving_directory']
         if not os.path.exists(directory):
             os.makedirs(directory)
         return
@@ -41,9 +43,9 @@ class TightBindingHelpers(object):
         Returns: None
 
         """
-        start = self.__configuration['start']
-        end = self.__configuration['stop']
-        step = self.__configuration['step']
+        start = self.__settings['start']
+        end = self.__settings['stop']
+        step = self.__settings['step']
         E = np.arange(start, end, step)
         plt.figure(figsize=(13.66, 7.68))
         plt.plot(E, density_of_states)
@@ -51,7 +53,7 @@ class TightBindingHelpers(object):
         plt.xlabel('Energy [a.u.]')
         plt.ylabel('DOS')
         plt.title('Density of states for ' + str(num_of_atoms) + ' atoms')
-        plt.savefig(self.__configuration['saving_directory'] + '/__DOS__' + save_file + '.png', dpi=400)
+        plt.savefig(self.__settings['saving_directory'] + '/__DOS__' + save_file + '.png', dpi=400)
         plt.close()
         return
 
@@ -78,14 +80,14 @@ class TightBindingHelpers(object):
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.scatter(x, y, z, marker='o')
-            plt.savefig(self.__configuration['saving_directory'] + '/_lattice_' + save_file + '.png', dpi=200)
+            plt.savefig(self.__settings['saving_directory'] + '/_lattice_' + save_file + '.png', dpi=200)
             plt.title('Lattice scheme for ' + str(num_of_atoms) + ' atoms')
             plt.axis('off')
             plt.close()
         else:
             plt.figure(figsize=(15, 10))
             plt.scatter(x, y, marker='o')
-            plt.savefig(self.__configuration['saving_directory'] + '/_lattice_' + save_file + '.png', dpi=200)
+            plt.savefig(self.__settings['saving_directory'] + '/_lattice_' + save_file + '.png', dpi=200)
             plt.axis('off')
             plt.close()
         return
@@ -100,7 +102,7 @@ class TightBindingHelpers(object):
         Returns: None
 
         """
-        with open(self.__configuration['saving_directory'] + '/' + save_file + '.txt', "w") as file:
+        with open(self.__settings['saving_directory'] + '/' + save_file + '.txt', "w") as file:
             for eigen_energy in eigen_energies:
                 file.write(str(eigen_energy) + "\n")
         return
@@ -114,10 +116,9 @@ class TightBindingHelpers(object):
         Returns: name of saving file
 
         """
-        save_file = None
-        sigma = self.__configuration['sigma']
-        gauss_sigma = self.__configuration['gauss_sigma']
-        lattice_type = self.__configuration['lattice_type']
+        title = self.__settings['title']
+        sigma = self.__configuration['fermi_level']
+        gauss_sigma = self.__settings['gauss_sigma']
         x_num_of_steps = self.__configuration['x_num_of_steps']
         calculation_type = self.__configuration['calculation_type']
 
@@ -130,7 +131,7 @@ class TightBindingHelpers(object):
                          str(gauss_sigma) + \
                         '_num_of_atoms=' + \
                         str(num_of_atoms) + '_' +\
-                        str(lattice_type)
+                        str(title)
         elif x_num_of_steps == None:
             vertical_num_of_steps = self.__configuration['vertical_num_of_steps']
             horizontal_num_of_steps = self.__configuration['horizontal_num_of_steps']
@@ -146,6 +147,6 @@ class TightBindingHelpers(object):
                           str(horizontal_num_of_steps) + \
                           '_num_of_atoms=' + \
                           str(num_of_atoms) + '_' +\
-                        str(lattice_type)
+                        str(title)
         return save_file
 

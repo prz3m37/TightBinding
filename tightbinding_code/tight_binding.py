@@ -29,7 +29,7 @@ class TightBinding(object):
         self.__slater_coster = SlaterKoster()
 
     @staticmethod
-    def __get_closest_friends(points: list, method: str, number_of_friends: int = None, distance: float = None) -> list:
+    def __get_closest_friends(points: list, method: str, number_of_friends:int=None, distance: float=None) -> list:
 
         """
         Method uses KDTree algorithm for searching closets neighbours (according to Euclidean space) of each atom in
@@ -42,16 +42,18 @@ class TightBinding(object):
             distance: maximum distance defining point as closest neighbour.
         Returns: List of indices of points which are neighbours.
         """
+        #print(points)
         tree = sn.KDTree(np.array(points), leaf_size=2)
         if method == 'distance':
-            close_friends, nn_dist= tree.query_radius(points, r=distance + 0.000001, sort_results=True, return_distance=True) #1.536329 + 0.000001
+            close_friends, _= tree.query_radius(points, r=distance, sort_results=True, return_distance=True)
         else:
             close_friends = tree.query(points, k=number_of_friends)[1]
+
         return close_friends
 
-    def __get_non_zero_values_and_indices(self, data, calculation_type, method, distance, constants_of_pairs,
-                                          atom_store, number_of_friends = None, lp=None, ld=None,
-                                          flat=True) -> (list, list, list):
+    def __get_non_zero_values_and_indices(self, data: pd.DataFrame, distance: float, constants_of_pairs: dict, atom_store: dict, 
+                                          calculation_type: str ='non spin', method: str = 'distance', number_of_friends: int=None, 
+                                          lp: float=0, ld: float=0, flat: bool=True) -> (list, list, list):
 
         """
         Method calculates non-zero values (Slater Koster matrix values) with their localization (indices of rows and
@@ -81,7 +83,6 @@ class TightBinding(object):
 
         if calculation_type == 'non spin':
             num = 10
-
         else:
             num = 20
 
@@ -92,8 +93,6 @@ class TightBinding(object):
         rows = []
         values = []
         for friends in close_friends:
-            #if len(friends) < 3 or len(friends) > 4:
-             #   print(friends)
             host = friends[0]
             type_of_host = data['type_of_atom'].iloc[host]
             h_diagonal = self.__slater_coster.calculate_spin_mixing_diagonal(calculation_type,
@@ -101,7 +100,7 @@ class TightBinding(object):
                                                                              type_of_host,
                                                                              lp,
                                                                              ld)
-            h_diagonal_non_zero_indices = np.where(h_diagonal != 0)
+            h_diagonal_non_zero_indices = np.where(h_diagonal!=0)
             h_diagonal_non_zero_values = np.array(h_diagonal[h_diagonal_non_zero_indices])[0]
 
             h_diagonal_rows = h_diagonal_non_zero_indices[0] + int(host * num)
@@ -110,12 +109,10 @@ class TightBinding(object):
             columns.append(h_diagonal_columns)
             rows.append(h_diagonal_rows)
             values.append(h_diagonal_non_zero_values)
-            #print("#####################")
             if len(friends) > 1:
                 for friend in friends[1:]:
                     ri, rj = data['localization'].iloc[host], data['localization'].iloc[friend]
                     type_of_friend = data['type_of_atom'].iloc[friend]
-
                     h_sk = self.__slater_coster.calculate_spin_mixing_sk(calculation_type,
                                                                          ri,
                                                                          rj,
@@ -133,11 +130,13 @@ class TightBinding(object):
                     columns.append(h_sk_columns)
                     rows.append(h_sk_rows)
                     values.append(h_sk_non_zero_values)
+            else:
+                pass
 
         columns = np.concatenate(columns)
         rows = np.concatenate(rows)
         values = np.concatenate(values)
-        print('                 ____________________MATRIX_CALCULATED____________________\n')
+        print('[INFO]: Interaction matrix calculated \n')
         
         return columns, rows, values, num
 
@@ -157,22 +156,27 @@ class TightBinding(object):
 
         return matrix_final
         
-    def calculate_eigenvalues_ang_eigenvectors(self, num_of_eigenvalues: int, which: str='LM',
-                                               sigma: float=None, lanczos_vectors=None,**kwargs) -> (np.array, np.array):
+    def calculate_eigenvalues_ang_eigenvectors(self, num_of_eigenvalues: int, magnitude: str='LM',
+                                               fermi_level: float=None, lanczos_vectors=None,**kwargs) -> (np.array, np.array):
 
         """
         Method calculates eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix.
         Args:
             num_of_eigenvalues: number of eigenvalues to count
-            which: type of evalueted eigenvalues.
+            magnitude: type of evalueted eigenvalues.
             **kwargs: arguments of __create_sparse_matrix method
-            sigma: shift-invert parameter (in fact this can be interpreted as Fermi energy level)
+            fermi_level: shift-invert parameter (in fact this can be interpreted as Fermi energy level)
         Returns: eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix
         """
 
         sparse_matrix = self.__create_sparse_matrix(**kwargs)
-        print('__________________Eigenvalues calculating from matrix of shape: ', sparse_matrix.shape, '__________________\n')
-        eigenvalues, eigenvectors = eigsh(sparse_matrix, k=num_of_eigenvalues, which=which, sigma=sigma, mode='normal', ncv = lanczos_vectors)
+        print('[INFO]: Eigenvalues calculating from matrix of shape: ', sparse_matrix.shape, '\n')
+        eigenvalues, eigenvectors = eigsh(sparse_matrix, 
+                                          k=num_of_eigenvalues, 
+                                          which=magnitude, 
+                                          sigma=fermi_level, 
+                                          mode='normal', 
+                                          ncv = lanczos_vectors)
 
         return eigenvalues, eigenvectors
 
@@ -190,7 +194,7 @@ class TightBinding(object):
         D_E = 0
         for eigenenergy in eigenenergies:
             D_E = D_E + np.exp(-(E - eigenenergy)**2 / (2 * gauss_width**2)) / (np.pi * gauss_width * np.sqrt(2))
-        print('           ____________________DOS_CALCULATED____________________\n')
+        print('[INFO]: DOS calculated \n')
         return D_E
 
     @staticmethod
@@ -214,5 +218,5 @@ class TightBinding(object):
             D_projected = D_projected + np.abs(np.dot(np.conj(eigenstates[:, num]),
                                                       eigenstates[:, np.where(eigenenergy)[0][0]]))\
                           * np.exp(-(E - eigenenergy)**2 / (2 * gauss_width**2)) / (np.pi * gauss_width * np.sqrt(2))
-        print('             ____________________PROJECTED_DOS_CALCULATED____________________\n')
+        print('[INFO]: Projected DOS calculated \n')
         return D_projected

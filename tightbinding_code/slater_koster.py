@@ -73,7 +73,6 @@ class SlaterKoster(object):
         r_diff = ri - rj
         r_diff_mod = np.linalg.norm(ri - rj)
         n = {'nx': r_diff[0] / r_diff_mod, 'ny': r_diff[1] / r_diff_mod, 'nz': r_diff[2] / r_diff_mod}
-        
         return n
 
     def __calculate_slayterkoster_matrix(self, ri: int, rj: int,

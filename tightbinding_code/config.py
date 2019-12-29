@@ -1,15 +1,17 @@
 import numpy as np
-
-def V_alpha(h, r=1.42):
+def V_alpha(h, r=1.42, type_structure='graphene'):
   n = 2.
   n_c = 6.5
-  r_o = 1.536329
+  r_o = 2.23
   r_c = 2.18
-  s = np.exp((-n*(r/r_c)**(n_c) + n*(r/r_c)**(n_c))) * (r_o/r)**n 
+  if type_structure == 'graphene':
+    s = np.exp( -n * (r / r_c)**(n_c) + n * (r_o / r_c)**(n_c) ) * (r_o / r)**n 
+  else:
+    s = (r_o / r)**n 
   h_alpha = h * s
   return h_alpha
 
-diagonal_energies1 = {'C': {'Es': -50,
+diagonal_energies_p = {'C': {'Es': -50,
                            'Epx': -50,
                            'Epy': -50,
                            'Epz': 0,
@@ -21,7 +23,7 @@ diagonal_energies1 = {'C': {'Es': -50,
                            'Estar': 4000.}}   
 
                               
-interactive_constans1 = {('C', 'C'): {'V_sssigma': 0,
+interactive_constans_p = {('C', 'C'): {'V_sssigma': 0,
                                      'V_spsigma': 0,
                                      'V_sdsigma': 0.,
                                      'V_starsssigma':0,
@@ -38,65 +40,8 @@ interactive_constans1 = {('C', 'C'): {'V_sssigma': 0,
                                      } 
 
 
-diagonal_energies2 = {'C': {'Es': -2.990,
-                           'Epx': 3.710,
-                           'Epy': 3.710,
-                           'Epz': 3.710,
-                           'Edz2': 4000.,
-                           'Edxz': 4000.,
-                           'Edyz': 4000.,
-                           'Edxy': 4000.,
-                           'Edx2y2': 4000.,
-                           'Estar': 4000.}}   
-                                           
 
-interactive_constans2 = {('C', 'C'): {'V_sssigma': -5.000,
-                                     'V_spsigma': 4.700,
-                                     'V_sdsigma': 0.,
-                                     'V_starsssigma':0,
-                                     'V_starssigma': 0.,
-                                     'V_starpsigma': 0.,
-                                     'V_stardsigma': 0.,
-                                     'V_ppsigma': 5.500,
-                                     'V_pppi': -1.550,
-                                     'V_pdsigma': 0.,
-                                     'V_pdpi': 0.,
-                                     'V_ddsigma': 0.,
-                                     'V_ddpi': 0.,
-                                     'V_ddd': 0.}
-                                     } 
-
-
-diagonal_energies3 = {'C': {'Es': -10.290,
-                           'Epx': 0,
-                           'Epy': 0,
-                           'Epz': 0,
-                           'Edz2': 4000.,
-                           'Edxz': 4000.,
-                           'Edyz': 4000.,
-                           'Edxy': 4000.,
-                           'Edx2y2': 4000.,
-                           'Estar': 4000.}}   
-                                           
-
-interactive_constans3 = {('C', 'C'): {'V_sssigma': -8.42256,
-                                     'V_spsigma': 8.08162,
-                                     'V_sdsigma': 0.,
-                                     'V_starsssigma':0,
-                                     'V_starssigma': 0.,
-                                     'V_starpsigma': 0.,
-                                     'V_stardsigma': 0.,
-                                     'V_ppsigma': 7.75792,
-                                     'V_pppi': -3.67510,
-                                     'V_pdsigma': 0.,
-                                     'V_pdpi': 0.,
-                                     'V_ddsigma': 0.,
-                                     'V_ddpi': 0.,
-                                     'V_ddd': 0.}
-                                     } 
-
-
-diagonal_energies4 = {'C': {'Es': -2.99,
+diagonal_energies_sp = {'C': {'Es': -2.99,
                            'Epx': 3.71,
                            'Epy': 3.71,
                            'Epz': 3.71,
@@ -108,7 +53,7 @@ diagonal_energies4 = {'C': {'Es': -2.99,
                            'Estar': 4000.}}   
                                            
 
-interactive_constans4 = {('C', 'C'): {'V_sssigma': V_alpha(h=-5., r=1.42),
+interactive_constans_sp = {('C', 'C'): {'V_sssigma': V_alpha(h=-5., r=1.42),
                                      'V_spsigma': V_alpha(h=4.7, r=1.42),
                                      'V_sdsigma': 0.,
                                      'V_starsssigma':0,
@@ -127,7 +72,7 @@ interactive_constans4 = {('C', 'C'): {'V_sssigma': V_alpha(h=-5., r=1.42),
 
 
 
-diagonal_energies5 = {'C': {'Es': -1.0458,
+diagonal_energies_spds = {'C': {'Es': -1.0458,
                            'Epx': 7.0850,
                            'Epy': 7.0850,
                            'Epz': 7.0850,
@@ -139,7 +84,7 @@ diagonal_energies5 = {'C': {'Es': -1.0458,
                            'Estar': 38.2661}}   
                                            
 
-interactive_constans5 = {('C', 'C'): {'V_sssigma': V_alpha(h=-4.3882, r=1.42),
+interactive_constans_spds = {('C', 'C'): {'V_sssigma': V_alpha(h=-4.3882, r=1.42),
                                      'V_spsigma': V_alpha(h=5.4951, r=1.42),
                                      'V_sdsigma': V_alpha(h=-2.7655, r=1.42),
                                      'V_starsssigma':V_alpha(h=-2.3899, r=1.42),
@@ -154,6 +99,36 @@ interactive_constans5 = {('C', 'C'): {'V_sssigma': V_alpha(h=-4.3882, r=1.42),
                                      'V_ddpi': V_alpha(h=4.9779, r=1.42),
                                      'V_ddd': V_alpha(h=-3.9884, r=1.42)}
                                      } 
+
+
+diagonal_energies_silicen = {'C': {'Es': -2.0196,
+                           'Epx': 4.5448,
+                           'Epy': 4.5448,
+                           'Epz': 4.5448,
+                           'Edz2': 14.1836,
+                           'Edxz': 14.1836,
+                           'Edyz': 14.1836,
+                           'Edxy': 14.1836,
+                           'Edx2y2': 14.1836,
+                           'Estar': 19.6748}}   
+                                           
+
+interactive_constans_silicen = {('C', 'C'): {'V_sssigma': V_alpha(h=-1.9413, r=1.42, type_structure='silicen'),
+                                     'V_spsigma': V_alpha(h=2.7836, r=1.42, type_structure='silicen'),
+                                     'V_sdsigma': V_alpha(h=-2.7998, r=1.42, type_structure='silicen'),
+                                     'V_starsssigma':V_alpha(h=-1.6933, r=1.42, type_structure='silicen'),
+                                     'V_starssigma': V_alpha(h=-3.3081, r=1.42, type_structure='silicen'),
+                                     'V_starpsigma': V_alpha(h=2.8428, r=1.42, type_structure='silicen'),
+                                     'V_stardsigma': V_alpha(h=-0.7003, r=1.42, type_structure='silicen'),
+                                     'V_ppsigma': V_alpha(h=4.1068, r=1.42, type_structure='silicen'),
+                                     'V_pppi': V_alpha(h=-1.5934, r=1.42, type_structure='silicen'),
+                                     'V_pdsigma': V_alpha(h=-2.1073, r=1.42, type_structure='silicen'),
+                                     'V_pdpi': V_alpha(h=1.9977, r=1.42, type_structure='silicen'),
+                                     'V_ddsigma': V_alpha(h=-1.2327, r=1.42, type_structure='silicen'),
+                                     'V_ddpi': V_alpha(h=2.5145, r=1.42, type_structure='silicen'),
+                                     'V_ddd': V_alpha(h=-2.4734, r=1.42, type_structure='silicen')}
+                                     } 
+
 
 interactive_constans_spin_spin_orbita = {'C': {'Es up up': 1,
                                                'Epx up up': 1.,
@@ -175,319 +150,32 @@ interactive_constans_spin_spin_orbita = {'C': {'Es up up': 1,
                                                'Edxy down down': 1,
                                                'Edx2y2 down down': 1,
                                                'Estar down down': 1}}
+
+settings = { 
+ 'gauss_sigma': 0.015,
+ 'start': -10,
+ 'stop': 20,  
+ 'step': 0.001,
+ 'title': 'hexagonal_ZIGZAG_silicen',
+ 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',}
                                           
 
 configuration = {
 
-'parametrization1':
-{'lattice_type': 'rectagonal1_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.42, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 120,
- 'horizontal_num_of_steps': 8,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies1,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 3600, #4910
- 'interactive_constans': interactive_constans1,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
+'parametrization':
+{
+ 
  'ld':None,
  'lp': None,
- 'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
- 'parametrization2':
-{'lattice_type': 'rectagonal2_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.536329, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 120,
- 'horizontal_num_of_steps': 8,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
  'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies2,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 3600, #4910
- 'interactive_constans': interactive_constans2,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
- 'parametrization3':
-{'lattice_type': 'rectagonal3_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.312, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
+ 'distance': 1.42,
+ 'x_num_of_steps': 3,
  'lanczos_vectors':None,
- 'vertical_num_of_steps': 120,
- 'horizontal_num_of_steps': 8,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies3,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 3600, #4910
- 'interactive_constans': interactive_constans3,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
  'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
- 'parametrization4':
-{'lattice_type': 'rectagonal4_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1., # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 20,
- 'horizontal_num_of_steps': 60,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies1,
+ 'number_of_eigenvalues': 1,
  'calculation_type': 'non spin',
- 'number_of_eigenvalues': 3600, #4910
- 'interactive_constans': interactive_constans1,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
- 'parametrization5':
-{'lattice_type': 'rectagonal5_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.536329, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 20,
- 'horizontal_num_of_steps': 60,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
  'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies2,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 3600, #4910
- 'interactive_constans': interactive_constans2,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
- 'parametrization6':
-{'lattice_type': 'rectagonal6_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.312, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 20,
- 'horizontal_num_of_steps': 60,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies3,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 4000, #4910
- 'interactive_constans': interactive_constans3,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
- 'parametrization7':
-{'lattice_type': 'rectagonal7_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.42, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 20,
- 'horizontal_num_of_steps': 60,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies4,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 4000, #4910
- 'interactive_constans': interactive_constans4,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
-
- 'parametrization8':
-{'lattice_type': 'rectagonal8_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.42, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 120,
- 'horizontal_num_of_steps': 8,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies4,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 3600, #4910
- 'interactive_constans': interactive_constans4,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
-
-'parametrization9':
-{'lattice_type': 'rectagonal9',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.42, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 20,
- 'horizontal_num_of_steps': 60,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies5,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 4000, #4910
- 'interactive_constans': interactive_constans5,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
-
- 'parametrization10':
-{'lattice_type': 'rectagonal10',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.42, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 120,
- 'horizontal_num_of_steps': 8,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies5,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 4000, #4910
- 'interactive_constans': interactive_constans5,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': None,
- 'number_of_defects': None},
-
-
- 'parametrization11':
-{'lattice_type': 'rectagonal11_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.42, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 20,
- 'horizontal_num_of_steps': 60,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies5,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 4000, #4910
- 'interactive_constans': interactive_constans5,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': True,
- 'number_of_defects': None},
-
-
- 'parametrization12':
-{'lattice_type': 'rectagonal12_40_proc_of_defects',
- 'gauss_sigma': 0.015,
- 'start': -17,
- 'stop': 17,  
- 'step': 0.001,
- 'distance': 1.42, # 1.536329 pomyśleć z tymi zmiennoprzecinkowymi 
- 'lanczos_vectors':None,
- 'vertical_num_of_steps': 120,
- 'horizontal_num_of_steps': 8,
- 'x_num_of_steps': 39,
- 'sigma': 0.0001, 
- 'magnitude': 'LM',
- 'neighbour_calculation_method': 'distance',
- 'diagonal_energies':diagonal_energies5,
- 'calculation_type': 'non spin',
- 'number_of_eigenvalues': 4000, #4910
- 'interactive_constans': interactive_constans5,
- 'saving_directory': '/home/przemek/Documents/Modeling/tight_binding/results_diploma',
- 'ld':None,
- 'lp': None,
- 'number_of_friends':None,
- 'defects': True,
- 'number_of_defects': None}
-
-
-} 
-
-
-# TODO policzyc uklady z parametryzacją publikacje 
-# TODO poiczyć dla dewastacji na brzegach heksagonalnej struktury i prostokątnej
-#sys.argv[1]
+ 'diagonal_energies':diagonal_energies_silicen,
+ 'interactive_constans': interactive_constans_silicen,
+ 'fermi_level': 0
+  }} 

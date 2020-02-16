@@ -1,31 +1,31 @@
 import sys
+import warnings
 import numpy as np
 import pandas as pd
 import config as cfg
+warnings.filterwarnings("ignore")
 from tight_binding import TightBinding
-from helpers import TightBindingHelpers
 
 
-class ExecuteTightBindingCalculations():
+class ExecuteTightBindingCalculations(object):
 
     """
     ExecuteTightBindingCalculations is main class where all other classes are called for calculations desired system
 
     """
 
-    def __init__(self)->None:
+    def __init__(self, parametrization, helpers, settings) -> None:
         """
         Method calls all necessary classes : TightBinding, LatticeConstructor, HexGrid and LatticeConstructor class.
             The last two classes are unnecessary if user will define his lattice (in required format) by himself.
         """
-        sys.path.insert(1, '..')
-        self.__settings = cfg.settings
-        self.parametrization = sys.argv[1]
-        self.__tight_binding = TightBinding()
-        self.__configuration = cfg.configuration[self.parametrization]
 
+        self.__helpers = helpers
+        self.__settings = settings
+        self.__tight_binding = TightBinding(self.__helpers)
+        self.__configuration = cfg.configuration[parametrization]
 
-    def call_tight_binding_calculation(self, dimension: int, lattice_df_format: pd.DataFrame)->(np.array, np.array):
+    def __call_tight_binding_calculation(self, dimension: int, lattice_df_format: pd.DataFrame)->(np.array, np.array):
         """
         Method call Tight Binding class responsible for  calculation of eigen energies and eigen states (vectors) of
         defined lattice.
@@ -35,7 +35,6 @@ class ExecuteTightBindingCalculations():
 
         Returns: eigen energies and eigen states (vectors)
         """
-
 
         distance = self.__configuration['distance']
         magnitude = self.__configuration['magnitude']
@@ -47,7 +46,7 @@ class ExecuteTightBindingCalculations():
         constants_of_pairs = self.__configuration['interactive_constans']
         num_of_eigenvalues = self.__configuration['number_of_eigenvalues']
         neighbour_calculation_method = self.__configuration['neighbour_calculation_method']
-        energy, wave_function = self.__tight_binding.calculate_eigenvalues_ang_eigenvectors(
+        energy, wave_function = self.__tight_binding.calculate_eigenvalues_and_eigenvectors(
                                                                           dimension=dimension,
                                                                           data=lattice_df_format,
                                                                           calculation_type=calculation_type,
@@ -62,7 +61,19 @@ class ExecuteTightBindingCalculations():
                                                                           lanczos_vectors=lanczos_vectors)
         return energy, wave_function
 
-    def calculate_DOS(self, eigen_energies:np.array)->np.array:
+    def __diagonalize_tb_matrix(self, sparse_matrix):
+        magnitude = self.__configuration['magnitude']
+        fermi_level = self.__configuration['fermi_level']
+        lanczos_vectors = self.__configuration['lanczos_vectors']
+        num_of_eigenvalues = self.__configuration['number_of_eigenvalues']
+        energy, wave_function = self.__tight_binding.diagonalize_tb_matrix(sparse_matrix,
+                                                                           num_of_eigenvalues=num_of_eigenvalues,
+                                                                           magnitude=magnitude,
+                                                                           fermi_level=fermi_level,
+                                                                           lanczos_vectors=lanczos_vectors)
+        return energy, wave_function
+
+    def __calculate_DOS(self, eigen_energies:np.array)->np.array:
         """
         Method calculating density of states
         Args:
@@ -79,7 +90,7 @@ class ExecuteTightBindingCalculations():
         density_of_states = self.__tight_binding.evaluate_density_of_states(eigen_energies, E, gauss_sigma)
         return density_of_states
 
-    def calculate_projected_DOS(self, eigen_energies:np.array, eigen_vectors:np.array)->np.array:
+    def __calculate_projected_DOS(self, eigen_energies:np.array, eigen_vectors:np.array)->np.array:
         """
         Method calculating projected density of states
         Args:
@@ -100,3 +111,24 @@ class ExecuteTightBindingCalculations():
                                                                                                 gauss_sigma)
         return projected_density_of_states
 
+    def execute_tb_calculations(self, dimension, lattice_df_format):
+        try:
+            data_source = self.__settings["data_source"]
+            if data_source == "data base":
+                energies, wave_functions = self.__call_tight_binding_calculation(dimension, lattice_df_format)
+            else:
+                sparse_matrix = None
+                energies, wave_functions = self.__diagonalize_tb_matrix(sparse_matrix)
+            density_of_states = self.__calculate_DOS(energies)
+            projected_density_of_states = self.__calculate_projected_DOS(energies, wave_functions)
+            return energies, wave_functions, density_of_states, projected_density_of_states
+        except RuntimeError:
+            self.__helpers.save_log("[ERROR]: Factor is exactly singular \n")
+            self.__helpers.save_log("[INFO]: Calculations have stopped \n")
+            self.__helpers.close_logfile()
+            return
+        except TypeError:
+            self.__helpers.save_log("[ERROR]: No data to calculate. Please check your configuration or input \n")
+            self.__helpers.save_log("[INFO]: Calculations have stopped \n")
+            self.__helpers.close_logfile()
+            return

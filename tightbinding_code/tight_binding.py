@@ -21,15 +21,16 @@ class TightBinding(object):
         4. Lattices containing different types of atoms.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, helpers) -> None:
 
         """
         Method calls SlaterKoster class
         """
+        self.__helpers = helpers
         self.__slater_coster = SlaterKoster()
 
     @staticmethod
-    def __get_closest_friends(points: list, method: str, number_of_friends:int=None, distance: float=None) -> list:
+    def __get_closest_friends(points: list, method: str, number_of_friends:int=None, distance: float = None) -> list:
 
         """
         Method uses KDTree algorithm for searching closets neighbours (according to Euclidean space) of each atom in
@@ -42,10 +43,10 @@ class TightBinding(object):
             distance: maximum distance defining point as closest neighbour.
         Returns: List of indices of points which are neighbours.
         """
-        #print(points)
+
         tree = sn.KDTree(np.array(points), leaf_size=2)
         if method == 'distance':
-            close_friends, _= tree.query_radius(points, r=distance, sort_results=True, return_distance=True)
+            close_friends, _ = tree.query_radius(points, r=distance, sort_results=True, return_distance=True)
         else:
             close_friends = tree.query(points, k=number_of_friends)[1]
 
@@ -100,7 +101,7 @@ class TightBinding(object):
                                                                              type_of_host,
                                                                              lp,
                                                                              ld)
-            h_diagonal_non_zero_indices = np.where(h_diagonal!=0)
+            h_diagonal_non_zero_indices = np.where(h_diagonal != 0)
             h_diagonal_non_zero_values = np.array(h_diagonal[h_diagonal_non_zero_indices])[0]
 
             h_diagonal_rows = h_diagonal_non_zero_indices[0] + int(host * num)
@@ -136,7 +137,7 @@ class TightBinding(object):
         columns = np.concatenate(columns)
         rows = np.concatenate(rows)
         values = np.concatenate(values)
-        print('[INFO]: Interaction matrix calculated \n')
+        self.__helpers.save_log('[INFO]: Interaction matrix calculated \n')
         
         return columns, rows, values, num
 
@@ -156,8 +157,8 @@ class TightBinding(object):
 
         return matrix_final
         
-    def calculate_eigenvalues_ang_eigenvectors(self, num_of_eigenvalues: int, magnitude: str='LM',
-                                               fermi_level: float=None, lanczos_vectors=None,**kwargs) -> (np.array, np.array):
+    def calculate_eigenvalues_and_eigenvectors(self, num_of_eigenvalues: int, magnitude: str = 'LM',
+                                               fermi_level: float=None, lanczos_vectors=None, **kwargs) -> (np.array, np.array):
 
         """
         Method calculates eigenvalues (energies) and eigenvectors (wave functions) of interaction matrix.
@@ -170,18 +171,31 @@ class TightBinding(object):
         """
 
         sparse_matrix = self.__create_sparse_matrix(**kwargs)
-        print('[INFO]: Eigenvalues calculating from matrix of shape: ', sparse_matrix.shape, '\n')
+        self.__helpers.save_log('[INFO]: Eigenvalues calculating from matrix of shape: ', sparse_matrix.shape, '\n')
         eigenvalues, eigenvectors = eigsh(sparse_matrix, 
                                           k=num_of_eigenvalues, 
                                           which=magnitude, 
                                           sigma=fermi_level, 
                                           mode='normal', 
-                                          ncv = lanczos_vectors)
+                                          ncv=lanczos_vectors)
 
         return eigenvalues, eigenvectors
 
-    @staticmethod
-    def evaluate_density_of_states(eigenenergies:np.array, E:np.array, gauss_width:float) -> list:
+    def diagonalize_tb_matrix(self, sparse_matrix, num_of_eigenvalues: int, magnitude: str = 'LM',
+                              fermi_level: float=None, lanczos_vectors=None):
+
+        self.__helpers.save_log('[INFO]: Eigenvalues calculating from matrix of shape: ', sparse_matrix.shape, '\n')
+        eigenvalues, eigenvectors = eigsh(sparse_matrix,
+                                          k=num_of_eigenvalues,
+                                          which=magnitude,
+                                          sigma=fermi_level,
+                                          mode='normal',
+                                          ncv=lanczos_vectors)
+
+        return eigenvalues, eigenvectors
+
+    #@staticmethod
+    def evaluate_density_of_states(self, eigenenergies:np.array, E:np.array, gauss_width:float) -> list:
         """
         Method calculates density of states. Delta function is approximated by Gauss function.
         Args:
@@ -194,11 +208,11 @@ class TightBinding(object):
         D_E = 0
         for eigenenergy in eigenenergies:
             D_E = D_E + np.exp(-(E - eigenenergy)**2 / (2 * gauss_width**2)) / (np.pi * gauss_width * np.sqrt(2))
-        print('[INFO]: DOS calculated \n')
+        self.__helpers.save_log('[INFO]: DOS calculated \n')
         return D_E
 
-    @staticmethod
-    def evaluate_projected_density_of_states(eigenenergies:np.array, E:np.array, eigenstates:np.array,
+    #@staticmethod
+    def evaluate_projected_density_of_states(self, eigenenergies:np.array, E:np.array, eigenstates:np.array,
                                              gauss_width:float) -> list:
 
         """
@@ -218,5 +232,5 @@ class TightBinding(object):
             D_projected = D_projected + np.abs(np.dot(np.conj(eigenstates[:, num]),
                                                       eigenstates[:, np.where(eigenenergy)[0][0]]))\
                           * np.exp(-(E - eigenenergy)**2 / (2 * gauss_width**2)) / (np.pi * gauss_width * np.sqrt(2))
-        print('[INFO]: Projected DOS calculated \n')
+        self.__helpers.save_log('[INFO]: Projected DOS calculated \n')
         return D_projected

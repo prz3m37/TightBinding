@@ -11,6 +11,7 @@ def V_alpha(h, r=1.42, type_structure='graphene'):
   h_alpha = h * s
   return h_alpha
 
+
 diagonal_energies_p = {'C': {'Es': -50,
                            'Epx': -50,
                            'Epy': -50,
@@ -165,13 +166,13 @@ configuration = {
 'parametrization':
 {
  
- 'ld':None,
+ 'ld': None,
  'lp': None,
  'magnitude': 'LM',
  'distance': 1.42,
  'x_num_of_steps': 3,
- 'lanczos_vectors':None,
- 'number_of_friends':None,
+ 'lanczos_vectors': None,
+ 'number_of_friends': None,
  'number_of_eigenvalues': 1,
  'calculation_type': 'non spin',
  'neighbour_calculation_method': 'distance',

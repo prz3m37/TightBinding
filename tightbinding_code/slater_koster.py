@@ -1,6 +1,6 @@
 import numpy as np
 
-
+# TODO: Change the type of returned matrix (to ndarray)
 class SlaterKoster(object):
 
     """
@@ -158,11 +158,14 @@ class SlaterKoster(object):
         H_SK[5][7] = 0.5 * ny * nz *((nx**2 - ny**2) * (3 * Vdds - 4 * Vddp + Vddd) - 2 * (Vddp - Vddd))
         H_SK[4][7] = 0.5 * nx * ny * (nx**2 - ny**2) * (3 * Vdds - 4 * Vddp + Vddd)
         H_SK[4][8] = 0.5 * np.sqrt(3) * nx * ny * (nz**2 * (3 * Vdds - 4 * Vddp + Vddd) + Vddd - Vdds)
-        H_SK[5][8] = - 0.5 * np.sqrt(3) * ny * nz * ((nx**2 + ny**2) * (Vdds - 2 * Vddp + Vdds) + 2 * nz**2 * (Vddp - Vdds))
-        H_SK[6][8] = - 0.5 * np.sqrt(3) * nx * nz * ((nx**2 + ny**2) * (Vdds - 2 * Vddp + Vdds) + 2 * nz**2 * (Vddp - Vdds))
+        H_SK[5][8] = - 0.5 * np.sqrt(3) * ny * nz * ((nx**2 + ny**2) * (Vdds - 2 * Vddp + Vdds) +
+                                                     2 * nz**2 * (Vddp - Vdds))
+        H_SK[6][8] = - 0.5 * np.sqrt(3) * nx * nz * ((nx**2 + ny**2) * (Vdds - 2 * Vddp + Vdds) +
+                                                     2 * nz**2 * (Vddp - Vdds))
 
         H_SK[7][7] = 0.25 * (nx**2 - ny**2)**2 * (3 * Vdds - 4 * Vddp + Vddd) + (nx**2 + ny**2) * Vddp + nz**2 * Vdds
-        H_SK[8][8] = 0.75 * (nx**2 + ny**2)**2 * Vddd + 3 * (nx**2 + ny**2) * nz**2 * Vddp + 0.25 * (nx**2 + ny**2 - 2*nz**2)**2 * Vdds
+        H_SK[8][8] = 0.75 * (nx**2 + ny**2)**2 * Vddd + 3 * (nx**2 + ny**2) * nz**2 * Vddp + 0.25 * \
+                     (nx**2 + ny**2 - 2*nz**2)**2 * Vdds
         H_SK[7][8] = 0.25 * (nx**2 - ny**2) * (nz**2 * (3 * Vdds - 4 * Vddp + Vddd) + Vddd - Vdds)
 
         H_SK[0][9] = Vstarsssigma
@@ -415,10 +418,10 @@ class SlaterKoster(object):
 
             new_order = [0, 1, 2, 3, 4, 5, 7, 8, 6, 9]
             H_SK = H_SK[:, new_order]
-            
             H_SK[[6, 7]] = H_SK[[7, 8]]
+
             H_SK[[6, 8]] = H_SK[[8, 6]]
-            
+
             return np.matrix(H_SK)
 
     def __calculate_energy_matrix(self, atom_store: dict, atom_type: str)->np.array:
@@ -458,7 +461,7 @@ class SlaterKoster(object):
 
     def calculate_spin_mixing_sk(self, calculation_type: str, ri: np.array,
                                  rj: np.array, constants_of_pairs: dict, atom_i: str, atom_j: str,
-                                 flat: bool)->np.matrix:
+                                 flat: bool) -> np.matrix:
 
         """
         Method returns interaction matrix of required shape. If calculation_type is 'non spin' then Slater Koster matrix

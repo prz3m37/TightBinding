@@ -1,49 +1,54 @@
+import sys
 import datetime
-import warnings 
+import warnings
 import config as cfg
-warnings.filterwarnings("ignore")
+from data_manager import DataManager
 from helpers import TightBindingHelpers
 from execute_tb_calculations import ExecuteTightBindingCalculations
+warnings.filterwarnings("ignore")
 
 
-def main()->None:
+def main() -> None:
 
     """
     Function where user calls all required methods and classes,
     Returns: None
-
     """
 
-    print('\n[INFO]: Tight Binding calculations have started \n')
-    execute = ExecuteTightBindingCalculations()
-    helpers = TightBindingHelpers(execute.parametrization)
+    sys.path.insert(1, '..')
+    settings = cfg.settings
+    config_title = sys.argv[1]
+    configuration = cfg.configuration[config_title]
+    helpers = TightBindingHelpers()
+    data_manager = DataManager(helpers, settings)
+    execute = ExecuteTightBindingCalculations(helpers, settings, configuration)
+
+    helpers.create_logfile()
+    helpers.save_log('\n[INFO]: Tight Binding calculations have started \n')
+    input_data = settings["input data"]
+    dimension = input_data.shape[0]
+    helpers.save_log('\n[INFO]: Input DataFrame loaded into memory \n')
 
     start = datetime.datetime.now()
-    lattice_df_format, dimension = None, None
-
-    try: 
-        energies, wave_function = execute.call_tight_binding_calculation(dimension, lattice_df_format)
-    except RuntimeError:
-        print("[ERROR]: Factor is exactly singular \n")
-        print("[INFO]: Calculations have stopped \n")
-        return
-    except TypeError:
-        print("[ERROR]: No data to calculate. Please check your configuration or input \n")
-        print("[INFO]: Calculations have stopped \n")
-        return
-
-    density_of_states = execute.calculate_DOS(energies)
+    energies, wave_functions, interaction_matrix, dos, p_dos = execute.execute_tb_calculations(input_data)
     end = datetime.datetime.now()
 
-    print('[INFO]: Saving results \n')
-
+    helpers.save_log('[INFO]: Saving results \n')
     helpers.create_saving_folder()
-    file_name = helpers.get_file_name(dimension)
-    helpers.save_numerical_results(file_name, energies)
-    helpers.plot_DOS(file_name, dimension, density_of_states)
+    data_manager.save_data(energies, wave_functions, interaction_matrix, dos, p_dos, configuration)
+    helpers.save_log('[INFO]: Results saved \n')
 
-    print('[INFO]: Calculation time for ' + str(dimension) + ' atoms: ', end - start, '\n')
-    print('[INFO]: Calculations have sucesfully finished \n')
+    if settings["load file"] is not None:
+        helpers.save_log('[INFO]: Loading results \n')
+        data = data_manager.load_data()
+        # Please, process you data according to your needs.
+        helpers.save_log('[INFO]: Results visualized \n')
+    else:
+        pass
+
+    helpers.save_log('[INFO]: Calculation time for ' + str(dimension) + ' atoms: ' + str(end - start) + '\n')
+    helpers.save_log('[INFO]: Calculations have successfully finished \n')
+    helpers.close_logfile()
 
     return
 

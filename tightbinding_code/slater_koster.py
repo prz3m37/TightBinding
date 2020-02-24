@@ -1,6 +1,6 @@
 import numpy as np
 
-
+# TODO: Change the type of returned matrix (to ndarray)
 class SlaterKoster(object):
 
     """

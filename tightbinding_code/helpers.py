@@ -1,4 +1,5 @@
 import os
+import glob
 import datetime
 import numpy as np
 import config as cfg
@@ -69,19 +70,16 @@ class TightBindingHelpers(object):
         return
 
     @staticmethod
-    def generate_saving_key(title, save_type="directory"):
+    def generate_id_key(title):
         time = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        if save_type == "database":
-            saving_key = [time, title]
-        else:
-            saving_key = str(time) + " " + str(title)
+        saving_key = str(time) + " " + str(title)
         return saving_key
 
-    def save_all_params_to_file(self, parametrization, title):
-        saving_key = self.generate_saving_key(title)
+    def save_all_params_to_file(self, title, configuration):
+        saving_key = self.generate_id_key(title)
         params_file = open(saving_key + "_parametrization.txt")
-        for key in parametrization:
-            parameter = parametrization[key]
+        for key in configuration:
+            parameter = configuration[key]
             if type(parameter) == dict:
                 params_file.write(str(parameter) + ": ")
                 for p in parameter:
@@ -93,3 +91,6 @@ class TightBindingHelpers(object):
         params_file.close()
         return
 
+    def search_data_on_disc(self, file_name):
+        seeking_file = glob.glob('%s/%s.*' % (self.__directory, file_name), recursive=True)
+        return seeking_file

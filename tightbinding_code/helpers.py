@@ -71,7 +71,7 @@ class TightBindingHelpers(object):
         return seeking_file
 
     @staticmethod
-    def split_close_friends(close_friends, number_of_cpus):
+    def split_close_friends(close_friends: np.array, number_of_cpus: int):
         number_of_close_friends = len(close_friends)
         avg = number_of_close_friends / float(number_of_cpus)
         divided_close_friends = []

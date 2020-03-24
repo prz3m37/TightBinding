@@ -2,6 +2,7 @@ import gc
 import numpy as np
 import pandas as pd
 import scipy.spatial as scsp
+from multiprocessing import Pool
 from scipy.sparse.linalg import eigsh
 from slater_koster import SlaterKoster
 from scipy.sparse import coo_matrix, csr_matrix
@@ -59,17 +60,65 @@ class TightBinding(object):
             dimension = 20
         return dimension
 
-    def __split_close_friends(self, data: pd.DataFrame, number_of_cpus, distance):
-        atom_localization = data['localization'].values.tolist()
-        close_friends = self.__get_closest_friends(atom_localization, distance)
-        splitted_close_friends = self.__helpers.split_close_friends(close_friends=close_friends,
-                                                                    number_of_cpus=number_of_cpus)
-        return splitted_close_friends
+    def __calculate_diagonal_elements(self, data, hosts, dimension, calculation_type, atom_store, lp, ld):
+        columns, rows, values = [], [], []
+        for host in hosts:
+            type_of_host = data['type_of_atom'].iloc[host]
+            h_diagonal = self.__slater_koster.calculate_spin_mixing_diagonal(calculation_type,
+                                                                             atom_store,
+                                                                             type_of_host,
+                                                                             lp,
+                                                                             ld)
+            h_diagonal_non_zero_indices = np.where(h_diagonal != 0)
+            h_diagonal_non_zero_values = np.array(h_diagonal[h_diagonal_non_zero_indices])[0]
 
-    def __calculate_diagonal_elements(self):
-        return
+            h_diagonal_rows = h_diagonal_non_zero_indices[0] + int(host * dimension)
+            h_diagonal_columns = h_diagonal_non_zero_indices[1] + int(host * dimension)
 
-    def __calculate_non_diagonal_elements(self):
+            columns.append(h_diagonal_columns)
+            rows.append(h_diagonal_rows)
+            values.append(h_diagonal_non_zero_values)
+        return columns, rows, values
+
+    def __calculate_non_diagonal_elements(self, data, close_friends, dimension, calculation_type, constants_of_pairs):
+        columns, rows, values = [], [], []
+        for friends in close_friends:
+            for friend in friends[1:]:
+                host = friends[0]
+                type_of_host = data['type_of_atom'].iloc[host]
+                ri, rj = data['localization'].iloc[host], data['localization'].iloc[friend]
+                type_of_friend = data['type_of_atom'].iloc[friend]
+                h_sk = self.__slater_koster.calculate_spin_mixing_sk(calculation_type,
+                                                                     ri,
+                                                                     rj,
+                                                                     constants_of_pairs,
+                                                                     type_of_host,
+                                                                     type_of_friend)
+
+                h_sk_non_zero_indices = np.where(h_sk != 0)
+                h_sk_non_zero_values = np.array(h_sk[h_sk_non_zero_indices])[0]
+
+                h_sk_rows = h_sk_non_zero_indices[0] + int(host * dimension)
+                h_sk_columns = h_sk_non_zero_indices[1] + int(friend * dimension)
+
+                columns.append(h_sk_columns)
+                rows.append(h_sk_rows)
+                values.append(h_sk_non_zero_values)
+        return columns, rows, values
+
+    def __parallelize_calculations(self):
+
+        processes = []
+
+        for m in range(1, 16):
+            n = m + 1
+            p = Process(target=some_function, args=(m, n))
+            p.start()
+            processes.append(p)
+
+        for p in processes:
+            p.join()
+
         return
 
     def __construct_interaction_matrix(self):

@@ -460,8 +460,7 @@ class SlaterKoster(object):
         return H_Rii
 
     def calculate_spin_mixing_sk(self, calculation_type: str, ri: np.array,
-                                 rj: np.array, constants_of_pairs: dict, atom_i: str, atom_j: str,
-                                 flat: bool) -> np.matrix:
+                                 rj: np.array, constants_of_pairs: dict, atom_i: str, atom_j: str) -> np.matrix:
 
         """
         Method returns interaction matrix of required shape. If calculation_type is 'non spin' then Slater Koster matrix
@@ -473,7 +472,6 @@ class SlaterKoster(object):
             constants_of_pairs: dictionary with interaction constants
             atom_i: type of element of i-th atom in lattice
             atom_j: type of element of j-th atom in lattice
-            flat: bool
         Returns: Slater Koster matrix of required dimension
         """
 

@@ -63,18 +63,6 @@ class ExecuteTightBindingCalculations(object):
                                                                           num_of_eigenvalues=num_of_eigenvalues)
         return energy, wave_function, interaction_matrix
 
-    def __diagonalize_tb_matrix(self, sparse_matrix):
-        magnitude = self.__configuration['magnitude']
-        fermi_level = self.__configuration['fermi_level']
-        lanczos_vectors = self.__configuration['lanczos_vectors']
-        num_of_eigenvalues = self.__configuration['number_of_eigenvalues']
-        energy, wave_function = self.__tight_binding.diagonalize_tb_matrix(sparse_matrix,
-                                                                           num_of_eigenvalues=num_of_eigenvalues,
-                                                                           magnitude=magnitude,
-                                                                           fermi_level=fermi_level,
-                                                                           lanczos_vectors=lanczos_vectors)
-        return energy, wave_function
-
     def __calculate_DOS(self, eigen_energies: np.array) -> np.array:
         """
         Method calculating density of states

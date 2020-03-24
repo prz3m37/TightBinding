@@ -30,31 +30,6 @@ class TightBindingHelpers(object):
             os.makedirs(self.__directory)
         return
 
-    # def plot_DOS(self, save_file: str, num_of_atoms: str, density_of_states: np.array) -> None:
-    #     """
-    #     Method plots density of states and saves it (as png file).
-    #     Args:
-    #         save_file: name of png file
-    #         num_of_atoms: number of atoms in lattice.
-    #         density_of_states: array with numerical values of density of states
-    #
-    #     Returns: None
-    #
-    #     """
-    #     start = self.__settings['start']
-    #     end = self.__settings['stop']
-    #     step = self.__settings['step']
-    #     E = np.arange(start, end, step)
-    #     plt.figure(figsize=(13.66, 7.68))
-    #     plt.plot(E, density_of_states)
-    #     plt.axhline(y=0, color='r', linestyle='-')
-    #     plt.xlabel('Energy [a.u.]')
-    #     plt.ylabel('DOS')
-    #     plt.title('Density of states for ' + str(num_of_atoms) + ' atoms')
-    #     plt.savefig(self.__directory + '/__DOS__' + save_file + '.png', dpi=400)
-    #     plt.close()
-    #     return
-
     def create_logfile(self):
         self.__log_file = open("log_file.txt", "a+")
         return
@@ -94,3 +69,16 @@ class TightBindingHelpers(object):
     def search_data_on_disc(self, file_name):
         seeking_file = glob.glob('%s/%s.*' % (self.__directory, file_name), recursive=True)
         return seeking_file
+
+    @staticmethod
+    def split_close_friends(close_friends, number_of_cpus):
+        number_of_close_friends = len(close_friends)
+        avg = number_of_close_friends / float(number_of_cpus)
+        divided_close_friends = []
+        last = 0.0
+
+        while last < number_of_close_friends:
+            divided_close_friends.append(close_friends[int(last):int(last + avg)])
+            last += avg
+
+        return divided_close_friends

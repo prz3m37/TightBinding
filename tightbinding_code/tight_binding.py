@@ -1,7 +1,7 @@
 import gc
 import numpy as np
 import pandas as pd
-import sklearn.neighbors as sn
+import scipy.spatial as scsp
 from scipy.sparse.linalg import eigsh
 from slater_koster import SlaterKoster
 from scipy.sparse import coo_matrix, csr_matrix
@@ -27,32 +27,55 @@ class TightBinding(object):
         Method calls SlaterKoster class
         """
         self.__helpers = helpers
-        self.__slater_coster = SlaterKoster()
+        self.__slater_koster = SlaterKoster()
 
+    # TODO: Change for scipy version
     @staticmethod
-    def __get_closest_friends(points: list, method: str, number_of_friends:int=None, distance: float = None) -> list:
+    def __get_closest_friends(points: list, distance: float = None, power: float = 2, epsilon: float = 0) -> list:
 
         """
         Method uses KDTree algorithm for searching closets neighbours (according to Euclidean space) of each atom in
             lattice no matter what shape is.
         Args:
             points: list of coordinates [x,y,z] of all points in lattice.
-            method: type of method of searching closest neighbours; if method == 'distance', algorithm will search
-                    points in defined distance; else algorithm, will find defined by user number of neighbours.
-            number_of_friends: defined by user, number of neighbours of point in lattice
             distance: maximum distance defining point as closest neighbour.
+            power: Minkowski norm
+            epsilon: Approximate search. Branches of the tree are not explored if their nearest points are further
+             than r/(1+eps), and branches are added in bulk if their furthest points are nearer than r * (1+eps).
+              eps has to be non-negative.
         Returns: List of indices of points which are neighbours.
         """
 
-        tree = sn.KDTree(np.array(points), leaf_size=2)
-        if method == 'distance':
-            close_friends, _ = tree.query_radius(points, r=distance, sort_results=True, return_distance=True)
+        ctree = scsp.cKDTree(points)
+        close_friends_indices = ctree.query_ball_tree(ctree, r=distance, p=power, eps=epsilon)
+        close_friends_indices = list(close_friends_indices)
+        return close_friends_indices
+
+    @staticmethod
+    def __get_dimension(calculation_type):
+        if calculation_type == 'spin':
+            dimension = 10
         else:
-            close_friends = tree.query(points, k=number_of_friends)[1]
+            dimension = 20
+        return dimension
 
-        return close_friends
+    def __split_close_friends(self, data: pd.DataFrame, number_of_cpus, distance):
+        atom_localization = data['localization'].values.tolist()
+        close_friends = self.__get_closest_friends(atom_localization, distance)
+        splitted_close_friends = self.__helpers.split_close_friends(close_friends=close_friends,
+                                                                    number_of_cpus=number_of_cpus)
+        return splitted_close_friends
 
-    # TODO Think about paralelization of this process
+    def __calculate_diagonal_elements(self):
+        return
+
+    def __calculate_non_diagonal_elements(self):
+        return
+
+    def __construct_interaction_matrix(self):
+        return
+
+    # TODO split into processes
     def __get_non_zero_values_and_indices(self, data: pd.DataFrame, distance: float, constants_of_pairs: dict, atom_store: dict, 
                                           calculation_type: str ='non spin', method: str = 'distance', number_of_friends: int=None, 
                                           lp: float=0, ld: float=0, flat: bool=True) -> (list, list, list):
@@ -83,11 +106,6 @@ class TightBinding(object):
         Returns: Lists of row, column indices and list of non-zero values
         """
 
-        if calculation_type == 'non spin':
-            dimension = 10
-        else:
-            dimension = 20
-
         atom_localization = data['localization'].values.tolist()
         close_friends = self.__get_closest_friends(atom_localization, method, number_of_friends, distance)
 
@@ -97,7 +115,7 @@ class TightBinding(object):
         for friends in close_friends:
             host = friends[0]
             type_of_host = data['type_of_atom'].iloc[host]
-            h_diagonal = self.__slater_coster.calculate_spin_mixing_diagonal(calculation_type,
+            h_diagonal = self.__slater_koster.calculate_spin_mixing_diagonal(calculation_type,
                                                                              atom_store,
                                                                              type_of_host,
                                                                              lp,
@@ -115,7 +133,7 @@ class TightBinding(object):
                 for friend in friends[1:]:
                     ri, rj = data['localization'].iloc[host], data['localization'].iloc[friend]
                     type_of_friend = data['type_of_atom'].iloc[friend]
-                    h_sk = self.__slater_coster.calculate_spin_mixing_sk(calculation_type,
+                    h_sk = self.__slater_koster.calculate_spin_mixing_sk(calculation_type,
                                                                          ri,
                                                                          rj,
                                                                          constants_of_pairs,

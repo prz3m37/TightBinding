@@ -7,9 +7,11 @@ class SlaterKoster(object):
     SlaterKoster class calculates Slater-Koster matrix which describes interactions between two atoms in lattice.
         User can define whether wants to take Spin Orbit interaction into consideration or not.
     """
+    def __init__(self, dimension):
+        self.__dimension = dimension
 
     @staticmethod
-    def get_atom_type(atom_store: dict, atom_type: str) -> (dict, None):
+    def __get_atom_type(atom_store: dict, atom_type: str) -> (dict, None):
 
         """
         Method passes dictionary of physical constants of atoms in lattice
@@ -245,7 +247,7 @@ class SlaterKoster(object):
 
         H_SK = np.zeros((10, 10), complex)
 
-        state_energies_of_atom = self.get_atom_type(atom_store, atom_type)
+        state_energies_of_atom = self.__get_atom_type(atom_store, atom_type)
 
         if state_energies_of_atom is None:
 
@@ -434,14 +436,14 @@ class SlaterKoster(object):
         Returns: diagonal matrix of band energies
         """
 
-        atom_parameters = self.get_atom_type(atom_store, atom_type)
+        atom_parameters = self.__get_atom_type(atom_store, atom_type)
         H_Rii = np.zeros((10, 10))
 
         if atom_parameters is None:
             np.fill_diagonal(H_Rii, 0)
 
         else:
-            atom_parameters = self.get_atom_type(atom_store, atom_type)
+            atom_parameters = self.__get_atom_type(atom_store, atom_type)
 
             Es = atom_parameters['Es']
             Epx = atom_parameters['Epx']
@@ -459,8 +461,8 @@ class SlaterKoster(object):
 
         return H_Rii
 
-    def calculate_spin_mixing_sk(self, calculation_type: str, ri: np.array,
-                                 rj: np.array, constants_of_pairs: dict, atom_i: str, atom_j: str) -> np.matrix:
+    def calculate_spin_mixing_sk(self, ri: np.array, 
+    rj: np.array, constants_of_pairs: dict, atom_i: str, atom_j: str) -> np.matrix:
 
         """
         Method returns interaction matrix of required shape. If calculation_type is 'non spin' then Slater Koster matrix
@@ -475,7 +477,7 @@ class SlaterKoster(object):
         Returns: Slater Koster matrix of required dimension
         """
 
-        if calculation_type == 'non spin':
+        if self.__dimension == 10:
 
             the_chosen_one = np.matrix(self.__calculate_slayterkoster_matrix(ri, rj, constants_of_pairs, atom_i, atom_j))
         else:
@@ -487,14 +489,14 @@ class SlaterKoster(object):
 
         return the_chosen_one
 
-    def calculate_spin_mixing_diagonal(self, calculation_type: str, atom_store: dict, atom_type: str, lp: float,
+    def calculate_spin_mixing_diagonal(self, atom_store: dict, atom_type: str, lp: float,
                                        ld: float) -> np.matrix:
 
         """
         Method returns matrix of diagonal energies of required shape. If calculation_type is 'non spin' then
             diagonal matrix is 10x10, else 20x20 (because of spin-orbit interactions).
         Args:
-            calculation_type: If calculation_type is 'non spin' then diagonal matrix with band energies
+            dimnesion: If dimnesion equals 10 (for non spin calculations) then diagonal matrix with band energies
             is 10x10, else 20x20 (because of spin-orbit interactions)
             atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
@@ -503,7 +505,7 @@ class SlaterKoster(object):
         Returns:
         """
 
-        if calculation_type == 'non spin':
+        if self.__dimension == 10:
 
             diagonal_one = self.__calculate_energy_matrix(atom_store, atom_type)
 

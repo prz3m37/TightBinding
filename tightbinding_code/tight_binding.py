@@ -22,13 +22,15 @@ class TightBinding(object):
         4. Lattices containing different types of atoms.
     """
 
-    def __init__(self, helpers) -> None:
+    def __init__(self, helpers, number_of_processes) -> None:
 
         """
         Method calls SlaterKoster class
         """
+        self.__return_dict = None
         self.__helpers = helpers
-        self.__slater_koster = SlaterKoster()
+        self.__number_of_processes = number_of_processes
+        self.__slater_koster = SlaterKoster(self.dimension)
 
     # TODO: Change for scipy version
     @staticmethod
@@ -46,41 +48,39 @@ class TightBinding(object):
               eps has to be non-negative.
         Returns: List of indices of points which are neighbours.
         """
-
         ctree = scsp.cKDTree(points)
         close_friends_indices = ctree.query_ball_tree(ctree, r=distance, p=power, eps=epsilon)
         close_friends_indices = list(close_friends_indices)
         return close_friends_indices
 
     @staticmethod
-    def __get_dimension(calculation_type):
+    def __set_dimension(calculation_type):
         if calculation_type == 'spin':
-            dimension = 10
+            self.dimension = 10
         else:
-            dimension = 20
-        return dimension
+            self.dimension = 20
 
-    def __calculate_diagonal_elements(self, data, hosts, dimension, calculation_type, atom_store, lp, ld):
+    def __calculate_diagonal_elements(self, data, hosts, atom_store, lp, ld, process):
         columns, rows, values = [], [], []
         for host in hosts:
             type_of_host = data['type_of_atom'].iloc[host]
-            h_diagonal = self.__slater_koster.calculate_spin_mixing_diagonal(calculation_type,
-                                                                             atom_store,
+            h_diagonal = self.__slater_koster.calculate_spin_mixing_diagonal(atom_store,
                                                                              type_of_host,
                                                                              lp,
                                                                              ld)
             h_diagonal_non_zero_indices = np.where(h_diagonal != 0)
             h_diagonal_non_zero_values = np.array(h_diagonal[h_diagonal_non_zero_indices])[0]
 
-            h_diagonal_rows = h_diagonal_non_zero_indices[0] + int(host * dimension)
-            h_diagonal_columns = h_diagonal_non_zero_indices[1] + int(host * dimension)
+            h_diagonal_rows = h_diagonal_non_zero_indices[0] + int(host * self.dimension)
+            h_diagonal_columns = h_diagonal_non_zero_indices[1] + int(host * self.dimension)
 
             columns.append(h_diagonal_columns)
             rows.append(h_diagonal_rows)
             values.append(h_diagonal_non_zero_values)
-        return columns, rows, values
+        return_dict[process] = [columns, rows, values]
+        return
 
-    def __calculate_non_diagonal_elements(self, data, close_friends, dimension, calculation_type, constants_of_pairs):
+    def __calculate_non_diagonal_elements(self, data, close_friends, constants_of_pairs, process):
         columns, rows, values = [], [], []
         for friends in close_friends:
             for friend in friends[1:]:
@@ -88,8 +88,7 @@ class TightBinding(object):
                 type_of_host = data['type_of_atom'].iloc[host]
                 ri, rj = data['localization'].iloc[host], data['localization'].iloc[friend]
                 type_of_friend = data['type_of_atom'].iloc[friend]
-                h_sk = self.__slater_koster.calculate_spin_mixing_sk(calculation_type,
-                                                                     ri,
+                h_sk = self.__slater_koster.calculate_spin_mixing_sk(ri,
                                                                      rj,
                                                                      constants_of_pairs,
                                                                      type_of_host,
@@ -98,30 +97,54 @@ class TightBinding(object):
                 h_sk_non_zero_indices = np.where(h_sk != 0)
                 h_sk_non_zero_values = np.array(h_sk[h_sk_non_zero_indices])[0]
 
-                h_sk_rows = h_sk_non_zero_indices[0] + int(host * dimension)
-                h_sk_columns = h_sk_non_zero_indices[1] + int(friend * dimension)
+                h_sk_rows = h_sk_non_zero_indices[0] + int(host * self.dimension)
+                h_sk_columns = h_sk_non_zero_indices[1] + int(friend * self.dimension)
 
                 columns.append(h_sk_columns)
                 rows.append(h_sk_rows)
                 values.append(h_sk_non_zero_values)
-        return columns, rows, values
-
-    def __parallelize_calculations(self):
-
-        processes = []
-
-        for m in range(1, 16):
-            n = m + 1
-            p = Process(target=some_function, args=(m, n))
-            p.start()
-            processes.append(p)
-
-        for p in processes:
-            p.join()
-
+        return_dict[process] = [columns, rows, values]
         return
 
-    def __construct_interaction_matrix(self):
+    # TODO: Chceck this shit
+    def __parallelize_calculations(self, data, close_friends, constants_of_pairs, hosts, atom_store, lp, ld):
+        # https://stackoverflow.com/questions/10415028/how-can-i-recover-the-return-value-of-a-function-passed-to-multiprocessing-proce
+        number_of_processes = self.__number_of_processes
+        manager = multiprocessing.Manager()
+        self.__return_dict = manager.dict()
+        jobs = []
+        for i in range(0, number_of_processes + 1):
+            if i == number_of_processes:
+                process = multiprocessing.Process(target=self.__calculate_non_diagonal_elements, 
+                args=(data, hosts, atom_store, lp, ld, i))
+            else:
+                process = multiprocessing.Process(target=self.__calculate_diagonal_elements, 
+                args=(data, close_friends, constants_of_pairs, i))
+            jobs.append(process)
+            process.start()
+
+        for proc in jobs:
+            proc.join()
+        interaction_matrix_elements = self.return_dict
+        return interaction_matrix_elements
+
+    def __run_proper_type_of_calculations(self, **kwargs):
+        number_of_processes = self.__number_of_processes
+        if number_of_processes==1 or number_of_processes==None:
+            self.__helpers.split_close_friends(kwargs, number_of_processes=number_of_processes)
+            interaction_matrix_elements = self.__parallelize_calculations(kwargs)
+        else:
+            diag_columns, diag_rows, diag_values = self.__calculate_diagonal_elements(kwargs)
+            nondiag_columns, nondiag_rows, nondiag_values = self.__calculate_non_diagonal_elements(kwargs)
+            interaction_matrix_elements = [diag_columns, diag_rows, diag_values, 
+            nondiag_columns, nondiag_rows, nondiag_values]
+        return interaction_matrix_elements
+
+    def __construct_interaction_matrix(self, interaction_matrix_elements: (dict, list)):
+        if type(interaction_matrix_elements) == dict:
+            pass
+        if type(interaction_matrix_elements) == list:
+            pass
         return
 
     # TODO split into processes

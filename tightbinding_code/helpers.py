@@ -69,6 +69,11 @@ class TightBindingHelpers(object):
     def search_data_on_disc(self, file_name):
         seeking_file = glob.glob('%s/%s.*' % (self.__directory, file_name), recursive=True)
         return seeking_file
+    
+    @staticmethod
+    def get_number_of_cpu_s():
+        num_of_cpu_s = multiprocessing.cpu_count()
+        return num_of_cpu_s
 
     @staticmethod
     def split_close_friends(close_friends: np.array, number_of_cpus: int):

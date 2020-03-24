@@ -24,8 +24,8 @@ class ExecuteTightBindingCalculations(object):
         self.__helpers = helpers
         self.__settings = settings
         self.__configuration = configuration
-        self.__tight_binding = TightBinding(self.__helpers)
         self.__data_manager = DataManager(self.__helpers, self.__settings)
+        self.__tight_binding = TightBinding(self.__helpers, self.__configuration['number_of_cpus'])
 
     def __call_tight_binding_calculation(self, lattice_df_format: pd.DataFrame) -> (np.array, np.array):
         """

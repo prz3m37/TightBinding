@@ -1,18 +1,29 @@
 import numpy as np
 
 # TODO: Change the type of returned matrix (to ndarray)
+
+
 class SlaterKoster(object):
 
     """
     SlaterKoster class calculates Slater-Koster matrix which describes interactions between two atoms in lattice.
         User can define whether wants to take Spin Orbit interaction into consideration or not.
     """
-    def __init__(self, dimension):
-        self.__dimension = dimension
+
+    def __init__(self):
+        self.__initialize_slater_koster_params(self)
+
+    def __initialize_slater_koster_params(self):
+        self.lp = self.__configuration['lp']
+        self.ld = self.__configuration['ld']
+        self.spin_included = self.__configuration['spin_included']
+        self.calculation_type = self.__configuration['calculation_type']
+        self.diagonal_energies = self.__configuration['diagonal_energies']
+        self.interactive_constants = self.__configuration['interactive_constants']
+        return
 
     @staticmethod
     def __get_atom_type(atom_store: dict, atom_type: str) -> (dict, None):
-
         """
         Method passes dictionary of physical constants of atoms in lattice
         Args:
@@ -30,7 +41,6 @@ class SlaterKoster(object):
 
     @staticmethod
     def __get_interaction_constants(constants: dict, atom_i_type: str, atom_j_type: str) -> (dict, None):
-
         """
         Method returns dictionary with interaction constants. If constants are None,
             then all constants are equal to zero
@@ -46,7 +56,7 @@ class SlaterKoster(object):
             const = {'V_sssigma': 0,
                      'V_spsigma': 0,
                      'V_sdsigma': 0,
-                     'V_starsssigma':0,
+                     'V_starsssigma': 0,
                      'V_starssigma': 0,
                      'V_starpsigma': 0,
                      'V_stardsigma': 0,
@@ -64,7 +74,6 @@ class SlaterKoster(object):
 
     @staticmethod
     def __get_directional_cosines(ri: np.array, rj: np.array) -> dict:
-
         """
         Method calculates directional cosines for atoms in lattice
         Args:
@@ -74,12 +83,12 @@ class SlaterKoster(object):
         """
         r_diff = ri - rj
         r_diff_mod = np.linalg.norm(ri - rj)
-        n = {'nx': r_diff[0] / r_diff_mod, 'ny': r_diff[1] / r_diff_mod, 'nz': r_diff[2] / r_diff_mod}
+        n = {'nx': r_diff[0] / r_diff_mod, 'ny': r_diff[1] /
+             r_diff_mod, 'nz': r_diff[2] / r_diff_mod}
         return n
 
     def __calculate_slayterkoster_matrix(self, ri: int, rj: int,
                                          constants_of_pairs: dict, atom_i_type: str, atom_j_type: str) -> np.matrix:
-
         """
         Method calculates Slater-Koster matrix (dimension: 10x10)
         Args:
@@ -93,7 +102,8 @@ class SlaterKoster(object):
 
         H_SK = np.zeros((10, 10))
         n = self.__get_directional_cosines(ri, rj)
-        integral_const_of_atom = self.__get_interaction_constants(constants_of_pairs, atom_i_type, atom_j_type)
+        integral_const_of_atom = self.__get_interaction_constants(
+            constants_of_pairs, atom_i_type, atom_j_type)
 
         Vsss = integral_const_of_atom['V_sssigma']
         Vsps = integral_const_of_atom['V_spsigma']
@@ -125,50 +135,74 @@ class SlaterKoster(object):
         H_SK[0][6] = np.sqrt(3) * nx * nz * Vsds
         H_SK[0][7] = np.sqrt(3) / 2. * (nx * nx - ny * ny) * Vsds
         H_SK[0][8] = - 1. / 2. * (nx * nx + ny * ny - 2 * nz * nz) * Vsds
-        
+
         H_SK[1][1] = nx * nx * Vpps + (1 - nx * nx) * Vppp
         H_SK[1][2] = - nx * ny * (Vppp - Vpps)
         H_SK[1][3] = - nx * nz * (Vppp - Vpps)
-        H_SK[1][4] = np.sqrt(3) * nx * nx * ny * Vpds + (1 - 2 * nx * nx) * ny * Vpdp
+        H_SK[1][4] = np.sqrt(3) * nx * nx * ny * Vpds + \
+            (1 - 2 * nx * nx) * ny * Vpdp
         H_SK[1][5] = nx * ny * nz * (np.sqrt(3) * Vpds - 2 * Vpdp)
-        H_SK[1][6] = np.sqrt(3) * nx * nx * nz * Vpds + (1 - 2 * nx * nx) * nz * Vpdp
-        H_SK[1][7] = np.sqrt(3) * nx * (nx * nx - ny * ny) * Vpds + nx * (1 - nx * nx + ny * ny) * Vpdp
-        H_SK[1][8] = - np.sqrt(3) * nx * nz * nz * Vpdp - 0.5 * nx * (nx * nx + ny * ny - 2 * nz * nz) * Vpds
+        H_SK[1][6] = np.sqrt(3) * nx * nx * nz * Vpds + \
+            (1 - 2 * nx * nx) * nz * Vpdp
+        H_SK[1][7] = np.sqrt(3) * nx * (nx * nx - ny * ny) * \
+            Vpds + nx * (1 - nx * nx + ny * ny) * Vpdp
+        H_SK[1][8] = - np.sqrt(3) * nx * nz * nz * Vpdp - \
+            0.5 * nx * (nx * nx + ny * ny - 2 * nz * nz) * Vpds
 
         H_SK[2][2] = ny * ny * Vpps + (1 - ny * ny) * Vppp
         H_SK[2][3] = - ny * nz * (Vppp - Vpps)
-        H_SK[2][4] = np.sqrt(3) * ny * ny * nx * Vpds + (1 - 2 * ny * ny) * nx * Vpdp
-        H_SK[2][5] = np.sqrt(3) * ny * ny * nz * Vpds + (1 - 2 * ny * ny) * nz * Vpdp
+        H_SK[2][4] = np.sqrt(3) * ny * ny * nx * Vpds + \
+            (1 - 2 * ny * ny) * nx * Vpdp
+        H_SK[2][5] = np.sqrt(3) * ny * ny * nz * Vpds + \
+            (1 - 2 * ny * ny) * nz * Vpdp
         H_SK[2][6] = nx * ny * nz * (np.sqrt(3) * Vpds - 2 * Vpdp)
-        H_SK[2][7] = np.sqrt(3) / 2. * ny * (nx * nx - ny * ny) * Vpds - ny * (1 - ny * ny + nx * nx) * Vpdp
-        H_SK[2][8] = - np.sqrt(3) * ny * nz * nz * Vpdp - 0.5 * ny * (nx * nx + ny * ny - 2 * nz * nz) * Vpds
+        H_SK[2][7] = np.sqrt(3) / 2. * ny * (nx * nx - ny * ny) * \
+            Vpds - ny * (1 - ny * ny + nx * nx) * Vpdp
+        H_SK[2][8] = - np.sqrt(3) * ny * nz * nz * Vpdp - \
+            0.5 * ny * (nx * nx + ny * ny - 2 * nz * nz) * Vpds
 
         H_SK[3][3] = nz * nz * Vpps + (1 - nz * nz) * Vppp
         H_SK[3][4] = nx * ny * nz * (np.sqrt(3) * Vpds - 2 * Vpdp)
-        H_SK[3][5] = np.sqrt(3) * nz * nz * ny * Vpds + (1 - 2 * nz * nz) * ny * Vpdp
-        H_SK[3][6] = np.sqrt(3) * nz * nz * nx * Vpds + (1 - 2 * nz * nz) * nx * Vpdp
-        H_SK[3][7] = np.sqrt(3) / 2. * nz * (nx * nx - ny * ny) * Vpds - nz * (nx * nx - ny * ny) * Vpdp
-        H_SK[3][8] = np.sqrt(3) * nz * (nx * nx + ny * ny) * Vpdp - 0.5 * nz * (nx * nx + ny * ny - 2 * nz * nz) * Vpds
+        H_SK[3][5] = np.sqrt(3) * nz * nz * ny * Vpds + \
+            (1 - 2 * nz * nz) * ny * Vpdp
+        H_SK[3][6] = np.sqrt(3) * nz * nz * nx * Vpds + \
+            (1 - 2 * nz * nz) * nx * Vpdp
+        H_SK[3][7] = np.sqrt(3) / 2. * nz * (nx * nx - ny * ny) * \
+            Vpds - nz * (nx * nx - ny * ny) * Vpdp
+        H_SK[3][8] = np.sqrt(3) * nz * (nx * nx + ny * ny) * Vpdp - \
+            0.5 * nz * (nx * nx + ny * ny - 2 * nz * nz) * Vpds
 
-        H_SK[4][4] = nx**2 * ny**2 * (3 * Vdds - 4 * Vddp + Vddd) + (nx**2 + ny**2) * Vddp + nz**2 * Vddd
-        H_SK[5][5] = nz**2 * ny**2 * (3 * Vdds - 4 * Vddp + Vddd) + (nz**2 + ny**2) * Vddp + nx**2 * Vddd
-        H_SK[6][6] = nx**2 * nz**2 * (3 * Vdds - 4 * Vddp + Vddd) + (nx**2 + nz**2) * Vddp + ny**2 * Vddd
-        H_SK[4][5] = ny**2 * nx * nz * (3 * Vdds - 4 * Vddp + Vddd) + nx * nz * (Vddp - Vddd)
-        H_SK[4][6] = nx**2 * ny * nz * (3 * Vdds - 4 * Vddp + Vddd) + ny * nz * (Vddp - Vddd)
-        H_SK[5][6] = nz**2 * nx * ny * (3 * Vdds - 4 * Vddp + Vddd) + nx * ny * (Vddp - Vddd)
-        H_SK[6][7] = 0.5 * nx * nz *((nx**2 - ny**2) * (3 * Vdds - 4 * Vddp + Vddd) + 2 * (Vddp - Vddd))
-        H_SK[5][7] = 0.5 * ny * nz *((nx**2 - ny**2) * (3 * Vdds - 4 * Vddp + Vddd) - 2 * (Vddp - Vddd))
-        H_SK[4][7] = 0.5 * nx * ny * (nx**2 - ny**2) * (3 * Vdds - 4 * Vddp + Vddd)
-        H_SK[4][8] = 0.5 * np.sqrt(3) * nx * ny * (nz**2 * (3 * Vdds - 4 * Vddp + Vddd) + Vddd - Vdds)
+        H_SK[4][4] = nx**2 * ny**2 * \
+            (3 * Vdds - 4 * Vddp + Vddd) + (nx**2 + ny**2) * Vddp + nz**2 * Vddd
+        H_SK[5][5] = nz**2 * ny**2 * \
+            (3 * Vdds - 4 * Vddp + Vddd) + (nz**2 + ny**2) * Vddp + nx**2 * Vddd
+        H_SK[6][6] = nx**2 * nz**2 * \
+            (3 * Vdds - 4 * Vddp + Vddd) + (nx**2 + nz**2) * Vddp + ny**2 * Vddd
+        H_SK[4][5] = ny**2 * nx * nz * \
+            (3 * Vdds - 4 * Vddp + Vddd) + nx * nz * (Vddp - Vddd)
+        H_SK[4][6] = nx**2 * ny * nz * \
+            (3 * Vdds - 4 * Vddp + Vddd) + ny * nz * (Vddp - Vddd)
+        H_SK[5][6] = nz**2 * nx * ny * \
+            (3 * Vdds - 4 * Vddp + Vddd) + nx * ny * (Vddp - Vddd)
+        H_SK[6][7] = 0.5 * nx * nz * \
+            ((nx**2 - ny**2) * (3 * Vdds - 4 * Vddp + Vddd) + 2 * (Vddp - Vddd))
+        H_SK[5][7] = 0.5 * ny * nz * \
+            ((nx**2 - ny**2) * (3 * Vdds - 4 * Vddp + Vddd) - 2 * (Vddp - Vddd))
+        H_SK[4][7] = 0.5 * nx * ny * \
+            (nx**2 - ny**2) * (3 * Vdds - 4 * Vddp + Vddd)
+        H_SK[4][8] = 0.5 * np.sqrt(3) * nx * ny * (nz **
+                                                   2 * (3 * Vdds - 4 * Vddp + Vddd) + Vddd - Vdds)
         H_SK[5][8] = - 0.5 * np.sqrt(3) * ny * nz * ((nx**2 + ny**2) * (Vdds - 2 * Vddp + Vdds) +
                                                      2 * nz**2 * (Vddp - Vdds))
         H_SK[6][8] = - 0.5 * np.sqrt(3) * nx * nz * ((nx**2 + ny**2) * (Vdds - 2 * Vddp + Vdds) +
                                                      2 * nz**2 * (Vddp - Vdds))
 
-        H_SK[7][7] = 0.25 * (nx**2 - ny**2)**2 * (3 * Vdds - 4 * Vddp + Vddd) + (nx**2 + ny**2) * Vddp + nz**2 * Vdds
+        H_SK[7][7] = 0.25 * (nx**2 - ny**2)**2 * (3 * Vdds - 4 *
+                                                  Vddp + Vddd) + (nx**2 + ny**2) * Vddp + nz**2 * Vdds
         H_SK[8][8] = 0.75 * (nx**2 + ny**2)**2 * Vddd + 3 * (nx**2 + ny**2) * nz**2 * Vddp + 0.25 * \
-                     (nx**2 + ny**2 - 2*nz**2)**2 * Vdds
-        H_SK[7][8] = 0.25 * (nx**2 - ny**2) * (nz**2 * (3 * Vdds - 4 * Vddp + Vddd) + Vddd - Vdds)
+            (nx**2 + ny**2 - 2*nz**2)**2 * Vdds
+        H_SK[7][8] = 0.25 * (nx**2 - ny**2) * (nz**2 *
+                                               (3 * Vdds - 4 * Vddp + Vddd) + Vddd - Vdds)
 
         H_SK[0][9] = Vstarsssigma
         H_SK[9][1] = nx * Vstarps
@@ -181,7 +215,7 @@ class SlaterKoster(object):
         H_SK[9][7] = np.sqrt(3) / 2. * (nx * nx - ny * ny) * Vstards
         H_SK[9][8] = - 1. / 2. * (nx * nx + ny * ny - 2 * nz * nz) * Vstards
         H_SK[9][9] = Vstarss
-        
+
         H_SK[1][0] = - H_SK[0][1]
         H_SK[2][0] = - H_SK[0][2]
         H_SK[3][0] = - H_SK[0][3]
@@ -208,11 +242,11 @@ class SlaterKoster(object):
         H_SK[6][3] = - H_SK[3][6]
         H_SK[7][3] = - H_SK[3][7]
         H_SK[8][3] = - H_SK[3][8]
-        H_SK[5][4] = H_SK[4][5]        
-        H_SK[6][4] = H_SK[4][6] 
-        H_SK[6][5] = H_SK[5][6]   
+        H_SK[5][4] = H_SK[4][5]
+        H_SK[6][4] = H_SK[4][6]
+        H_SK[6][5] = H_SK[5][6]
         H_SK[7][6] = H_SK[6][7]
-        H_SK[7][5] = H_SK[5][7]  
+        H_SK[7][5] = H_SK[5][7]
         H_SK[7][4] = H_SK[4][7]
         H_SK[8][4] = H_SK[4][8]
         H_SK[8][5] = H_SK[5][8]
@@ -232,7 +266,6 @@ class SlaterKoster(object):
 
     def __spin_orbit_hamiltonian(self, atom_store: dict, atom_type: str, lp: float, ld: float, sgn: (float, None),
                                  sigma: str) -> np.matrix:
-
         """
         Method calculates diagonal matrix of band energies for spin-orbit interactions
         Args:
@@ -426,8 +459,7 @@ class SlaterKoster(object):
 
             return np.matrix(H_SK)
 
-    def __calculate_energy_matrix(self, atom_store: dict, atom_type: str)->np.array:
-
+    def __calculate_energy_matrix(self, atom_store: dict, atom_type: str) -> np.array:
         """
         Method calculates diagonal matrix of energies for band structure
         Args:
@@ -457,18 +489,18 @@ class SlaterKoster(object):
             Estar = atom_parameters['Estar']
 
             row, col = np.diag_indices_from(H_Rii)
-            H_Rii[row, col] = np.array([[Es, Epx, Epy, Epz, Edxy, Edyz, Edxz, Edx2y2, Edz2, Estar]])
+            H_Rii[row, col] = np.array(
+                [[Es, Epx, Epy, Epz, Edxy, Edyz, Edxz, Edx2y2, Edz2, Estar]])
 
         return H_Rii
 
-    def calculate_spin_mixing_sk(self, ri: np.array, 
-    rj: np.array, constants_of_pairs: dict, atom_i: str, atom_j: str) -> np.matrix:
-
+    def calculate_spin_mixing_sk(self, spin_included: bool, ri: np.array,
+                                 rj: np.array, constants_of_pairs: dict, atom_i: str, atom_j: str) -> np.matrix:
         """
-        Method returns interaction matrix of required shape. If calculation_type is 'non spin' then Slater Koster matrix
+        Method returns interaction matrix of required shape. If spin_included is False then Slater Koster matrix
             is 10x10, else 20x20 (because of spin-orbit interactions)
         Args:
-            calculation_type: If calculation_type is 'non spin' then Slater Koster matrix is 10x10, else 20x20.
+            spin_included: If spin_included is False then Slater Koster matrix is 10x10, else 20x20.
             ri: position of i-th atom in lattice
             rj: position of i-th atom in lattice
             constants_of_pairs: dictionary with interaction constants
@@ -477,26 +509,25 @@ class SlaterKoster(object):
         Returns: Slater Koster matrix of required dimension
         """
 
-        if self.__dimension == 10:
-
-            the_chosen_one = np.matrix(self.__calculate_slayterkoster_matrix(ri, rj, constants_of_pairs, atom_i, atom_j))
+        if spin_included == False:
+            the_chosen_one = np.matrix(self.__calculate_slayterkoster_matrix(
+                ri, rj, constants_of_pairs, atom_i, atom_j))
         else:
-
-            equal_spin_matrix = self.__calculate_slayterkoster_matrix(ri, rj, constants_of_pairs, atom_i, atom_j)
+            equal_spin_matrix = self.__calculate_slayterkoster_matrix(
+                ri, rj, constants_of_pairs, atom_i, atom_j)
 
             the_chosen_one = np.bmat([[equal_spin_matrix if i != j else np.zeros((10, 10))
                                        for i in range(2)] for j in range(2)])
 
         return the_chosen_one
 
-    def calculate_spin_mixing_diagonal(self, atom_store: dict, atom_type: str, lp: float,
+    def calculate_spin_mixing_diagonal(self, spin_included: bool, atom_store: dict, atom_type: str, lp: float,
                                        ld: float) -> np.matrix:
-
         """
-        Method returns matrix of diagonal energies of required shape. If calculation_type is 'non spin' then
+        Method returns matrix of diagonal energies of required shape. If spin_included is False then
             diagonal matrix is 10x10, else 20x20 (because of spin-orbit interactions).
         Args:
-            dimnesion: If dimnesion equals 10 (for non spin calculations) then diagonal matrix with band energies
+            spin_included: If spin_included is False then Slater Koster matrix is 10x10, else 20x20.
             is 10x10, else 20x20 (because of spin-orbit interactions)
             atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
@@ -505,16 +536,14 @@ class SlaterKoster(object):
         Returns:
         """
 
-        if self.__dimension == 10:
-
-            diagonal_one = self.__calculate_energy_matrix(atom_store, atom_type)
+        if spin_included == False:
+            diagonal_one = self.__calculate_energy_matrix(
+                atom_store, atom_type)
 
         else:
-
             diagonal_one = np.bmat([[self.__spin_orbit_hamiltonian(atom_store, atom_type, lp, ld, 1, ' up up'),
                                      self.__spin_orbit_hamiltonian(atom_store, atom_type, lp, ld, None, ' up down')],
                                     [self.__spin_orbit_hamiltonian(atom_store, atom_type, lp, ld, -1, ' down down'),
                                      self.__spin_orbit_hamiltonian(atom_store, atom_type, lp, ld, None, ' up down').H]])
 
         return np.matrix(diagonal_one)
-

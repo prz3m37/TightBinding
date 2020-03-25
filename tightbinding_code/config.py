@@ -7,23 +7,23 @@ diagonal_energies = {'C': {'Es': -50,
                            'Edyz': 4000.,
                            'Edxy': 4000.,
                            'Edx2y2': 4000.,
-                           'Estar': 4000.}}   
+                           'Estar': 4000.}}
 
-                              
+
 interactive_constants = {('C', 'C'): {'V_sssigma': 0,
-                                     'V_spsigma': 0,
-                                     'V_sdsigma': 0.,
-                                     'V_starsssigma':0,
-                                     'V_starssigma': 0.,
-                                     'V_starpsigma': 0.,
-                                     'V_stardsigma': 0.,
-                                     'V_ppsigma': 0,
-                                     'V_pppi': -2.6,
-                                     'V_pdsigma': 0.,
-                                     'V_pdpi': 0.,
-                                     'V_ddsigma': 0.,
-                                     'V_ddpi': 0.,
-                                     'V_ddd': 0.}}
+                                      'V_spsigma': 0,
+                                      'V_sdsigma': 0.,
+                                      'V_starsssigma': 0,
+                                      'V_starssigma': 0.,
+                                      'V_starpsigma': 0.,
+                                      'V_stardsigma': 0.,
+                                      'V_ppsigma': 0,
+                                      'V_pppi': -2.6,
+                                      'V_pdsigma': 0.,
+                                      'V_pdpi': 0.,
+                                      'V_ddsigma': 0.,
+                                      'V_ddpi': 0.,
+                                      'V_ddd': 0.}}
 
 settings = {
     'data_source': None,
@@ -36,7 +36,7 @@ settings = {
     'password': None,
     'db table': None,
     'select': None}
-                                          
+
 
 configuration = {
     'parametrization': {

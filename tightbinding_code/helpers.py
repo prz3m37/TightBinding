@@ -3,6 +3,7 @@ import glob
 import datetime
 import numpy as np
 import config as cfg
+import multiprocessing
 import matplotlib.pyplot as plt
 
 
@@ -40,7 +41,7 @@ class TightBindingHelpers(object):
 
     def save_log(self, message):
         msg = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + " " + \
-                  + message
+            + message
         self.__log_file.write(msg)
         return
 
@@ -60,16 +61,18 @@ class TightBindingHelpers(object):
                 for p in parameter:
                     params_file.write('\t' + "atom type: " + str(p))
                     for k in parameter[p]:
-                        params_file.write('\t ' + '\t' + str(k) + ": " + str(parameter[p][k]))
+                        params_file.write(
+                            '\t ' + '\t' + str(k) + ": " + str(parameter[p][k]))
             else:
                 params_file.write(key + ": " + str(parameter))
         params_file.close()
         return
 
     def search_data_on_disc(self, file_name):
-        seeking_file = glob.glob('%s/%s.*' % (self.__directory, file_name), recursive=True)
+        seeking_file = glob.glob('%s/%s.*' %
+                                 (self.__directory, file_name), recursive=True)
         return seeking_file
-    
+
     @staticmethod
     def get_number_of_cpu_s():
         num_of_cpu_s = multiprocessing.cpu_count()
@@ -83,7 +86,8 @@ class TightBindingHelpers(object):
         last = 0.0
 
         while last < number_of_close_friends:
-            divided_close_friends.append(close_friends[int(last):int(last + avg)])
+            divided_close_friends.append(
+                close_friends[int(last):int(last + avg)])
             last += avg
 
         return divided_close_friends

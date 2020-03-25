@@ -9,7 +9,6 @@ warnings.filterwarnings("ignore")
 
 
 def main() -> None:
-
     """
     Function where user calls all required methods and classes,
     Returns: None
@@ -30,12 +29,14 @@ def main() -> None:
     helpers.save_log('\n[INFO]: Input DataFrame loaded into memory \n')
 
     start = datetime.datetime.now()
-    energies, wave_functions, interaction_matrix, dos, p_dos = execute.execute_tb_calculations(input_data)
+    energies, wave_functions, interaction_matrix, dos, p_dos = execute.execute_tb_calculations(
+        input_data)
     end = datetime.datetime.now()
 
     helpers.save_log('[INFO]: Saving results \n')
     helpers.create_saving_folder()
-    data_manager.save_data(energies, wave_functions, interaction_matrix, dos, p_dos, configuration)
+    data_manager.save_data(energies, wave_functions,
+                           interaction_matrix, dos, p_dos, configuration)
     helpers.save_log('[INFO]: Results saved \n')
 
     if settings["load file"] is not None:
@@ -46,7 +47,8 @@ def main() -> None:
     else:
         pass
 
-    helpers.save_log('[INFO]: Calculation time for ' + str(dimension) + ' atoms: ' + str(end - start) + '\n')
+    helpers.save_log('[INFO]: Calculation time for ' +
+                     str(dimension) + ' atoms: ' + str(end - start) + '\n')
     helpers.save_log('[INFO]: Calculations have successfully finished \n')
     helpers.close_logfile()
 

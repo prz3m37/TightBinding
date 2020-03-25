@@ -17,7 +17,8 @@ class DataBaseConnection(object):
         self.__limit_of_reconnections = 0
 
     def set_connection(self):
-        self.__helpers.save_log('[INFO]: Setting up connection with data base\n')
+        self.__helpers.save_log(
+            '[INFO]: Setting up connection with data base\n')
         self.__connection = MySQLConnection(
             host=self.__host,
             user=self.__user,
@@ -27,7 +28,8 @@ class DataBaseConnection(object):
 
     def close_connection(self):
         self.__connection.close()
-        self.__helpers.save_log('[INFO]: Closing up connection with data base\n')
+        self.__helpers.save_log(
+            '[INFO]: Closing up connection with data base\n')
         return
 
     def execute_query(self, query, query_type):
@@ -41,18 +43,22 @@ class DataBaseConnection(object):
             return data
 
     def check_connection(self):
-        self.__helpers.save_log('[INFO]: Checking if connection with data base exists\n')
+        self.__helpers.save_log(
+            '[INFO]: Checking if connection with data base exists\n')
         if self.__connection is None:
-            self.__helpers.save_log('[INFO]: Restarting connection with data base\n')
+            self.__helpers.save_log(
+                '[INFO]: Restarting connection with data base\n')
             reconnection = 0
             while reconnection <= self.__limit_of_reconnections:
                 reconnection += 1
                 self.set_connection()
                 if self.__connection is not None and self.__connection.is_connected():
-                    self.__helpers.save_log('[ERROR]: Connection with data base has been restarted\n')
+                    self.__helpers.save_log(
+                        '[ERROR]: Connection with data base has been restarted\n')
                     break
                 else:
-                    self.__helpers.save_log('[INFO]: Reconnection number: {}\n'.format(reconnection))
+                    self.__helpers.save_log(
+                        '[INFO]: Reconnection number: {}\n'.format(reconnection))
                     continue
             return
         else:

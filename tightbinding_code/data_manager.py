@@ -32,13 +32,15 @@ class DataManager(object):
         if identifier is None:
             load_query = """SELECT {} from {}""".format(select, table)
         else:
-            load_query = """SELECT {} from {} WHERE {}""".format(select, table, identifier)
+            load_query = """SELECT {} from {} WHERE {}""".format(
+                select, table, identifier)
         return load_query
 
     @staticmethod
     def __save_as_pickle(matrix):
         with open("interaction_matrix", 'wb') as outfile:
-            pickled_matrix = pickle.dump(matrix, outfile, pickle.HIGHEST_PROTOCOL)
+            pickled_matrix = pickle.dump(
+                matrix, outfile, pickle.HIGHEST_PROTOCOL)
         return pickled_matrix
 
     @staticmethod
@@ -70,8 +72,10 @@ class DataManager(object):
         wave_functions_file = self.__save_as_pickle(wave_functions)
         interaction_matrix_file = self.__save_as_pickle(interaction_matrix)
         dos_file = self.__save_numerical_results("DOS", density_of_states)
-        p_dos_file = self.__save_numerical_results("PDOS", projected_density_of_states)
-        configuration_file = self.__helpers.save_all_params_to_file("parametrization_file", configuration)
+        p_dos_file = self.__save_numerical_results(
+            "PDOS", projected_density_of_states)
+        configuration_file = self.__helpers.save_all_params_to_file(
+            "parametrization_file", configuration)
         data_to_save = (energy_file, wave_functions_file,
                         interaction_matrix_file, dos_file, p_dos_file, configuration_file)
         return data_to_save
@@ -104,5 +108,3 @@ class DataManager(object):
             seeking_file = self.__settings["data_identification"]
             required_data = self.__helpers.search_data_on_disc(seeking_file)
         return required_data
-
-

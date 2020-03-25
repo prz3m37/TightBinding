@@ -1,11 +1,11 @@
+from tight_binding import TightBinding
+from data_manager import DataManager
 import sys
 import warnings
 import numpy as np
 import pandas as pd
 import config as cfg
 warnings.filterwarnings("ignore")
-from data_manager import DataManager
-from tight_binding import TightBinding
 
 
 class ExecuteTightBindingCalculations(object):
@@ -23,9 +23,8 @@ class ExecuteTightBindingCalculations(object):
 
         self.__helpers = helpers
         self.__settings = settings
-        self.__configuration = configuration
         self.__data_manager = DataManager(self.__helpers, self.__settings)
-        self.__tight_binding = TightBinding(self.__helpers, self.__configuration['number_of_cpus'])
+        self.__tight_binding = TightBinding(self.__helpers, configuration)
 
     def __call_tight_binding_calculation(self, lattice_df_format: pd.DataFrame) -> (np.array, np.array):
         """
@@ -37,30 +36,10 @@ class ExecuteTightBindingCalculations(object):
         Returns: eigen energies and eigen states (vectors)
         """
         lattice = lattice_df_format
-        atoms_number = lattice.shape[0]
-        distance = self.__configuration['distance']
-        magnitude = self.__configuration['magnitude']
-        fermi_level = self.__configuration['fermi_level']
-        atom_store = self.__configuration['diagonal_energies']
-        lanczos_vectors = self.__configuration['lanczos_vectors']
-        calculation_type = self.__configuration['calculation_type']
-        number_of_friends = self.__configuration['number_of_friends']
-        constants_of_pairs = self.__configuration['interactive_constants']
-        num_of_eigenvalues = self.__configuration['number_of_eigenvalues']
-        neighbour_calculation_method = self.__configuration['neighbour_calculation_method']
+        number_of_atoms = lattice.shape[0]
+
         energy, wave_function, interaction_matrix = self.__tight_binding.calculate_eigenvalues_and_eigenvectors(
-                                                                          data=lattice,
-                                                                          distance=distance,
-                                                                          magnitude=magnitude,
-                                                                          atom_store=atom_store,
-                                                                          fermi_level=fermi_level,
-                                                                          atoms_number=atoms_number,
-                                                                          lanczos_vectors=lanczos_vectors,
-                                                                          calculation_type=calculation_type,
-                                                                          number_of_friends=number_of_friends,
-                                                                          method=neighbour_calculation_method,
-                                                                          constants_of_pairs=constants_of_pairs,
-                                                                          num_of_eigenvalues=num_of_eigenvalues)
+            data=lattice, number_of_atoms=number_of_atoms,)
         return energy, wave_function, interaction_matrix
 
     def __calculate_DOS(self, eigen_energies: np.array) -> np.array:
@@ -77,7 +56,8 @@ class ExecuteTightBindingCalculations(object):
         step = self.__settings['step']
         gauss_sigma = self.__settings['gauss_sigma']
         E = np.arange(start, end, step)
-        density_of_states = self.__tight_binding.evaluate_density_of_states(eigen_energies, E, gauss_sigma)
+        density_of_states = self.__tight_binding.evaluate_density_of_states(
+            eigen_energies, E, gauss_sigma)
         return density_of_states
 
     def __calculate_projected_DOS(self, eigen_energies: np.array, eigen_vectors: np.array) -> np.array:
@@ -103,9 +83,11 @@ class ExecuteTightBindingCalculations(object):
 
     def execute_tb_calculations(self, lattice):
         try:
-            energies, wave_functions, interaction_matrix = self.__call_tight_binding_calculation(lattice)
+            energies, wave_functions, interaction_matrix = self.__call_tight_binding_calculation(
+                lattice)
             density_of_states = self.__calculate_DOS(energies)
-            projected_density_of_states = self.__calculate_projected_DOS(energies, wave_functions)
+            projected_density_of_states = self.__calculate_projected_DOS(
+                energies, wave_functions)
             return energies, wave_functions, interaction_matrix, density_of_states, projected_density_of_states
         except RuntimeError:
             self.__helpers.save_log("[ERROR]: Factor is exactly singular \n")
@@ -113,7 +95,8 @@ class ExecuteTightBindingCalculations(object):
             self.__helpers.close_logfile()
             return
         except TypeError:
-            self.__helpers.save_log("[ERROR]: No data to calculate. Please check your configuration or input \n")
+            self.__helpers.save_log(
+                "[ERROR]: No data to calculate. Please check your configuration or input \n")
             self.__helpers.save_log("[INFO]: Calculations have stopped \n")
             self.__helpers.close_logfile()
             return

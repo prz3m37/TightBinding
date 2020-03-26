@@ -28,20 +28,20 @@ class TightBinding(object):
         """
         self.__return_dict = None
         self.__helpers = helpers
-        self.__configuration = configuration
-        self.__slater_koster = SlaterKoster()
-        self.__initialize_tight_binding_params()
+        self.__params = configuration
+        self.__load_tight_binding_params()
+        self.__slater_koster = SlaterKoster(self.spin_included)
 
     def __initialize_tight_binding_params(self):
-        self.power = self.__configuration['power']
-        self.epsilon = self.__configuration['epsilon']
-        self.distance = self.__configuration['distance']
-        self.magnitude = self.__configuration['magnitude']
-        self.fermi_level = self.__configuration['fermi_level']
-        self.spin_included = self.__configuration['spin_included']
-        self.lanczos_vectors = self.__configuration['lanczos_vectors']
-        self.number_of_processes = self.__configuration['number_of_cpus']
-        self.num_of_eigenvalues = self.__configuration['num_of_eigenvalues']
+        self.power = self.__params['power']
+        self.epsilon = self.__params['epsilon']
+        self.distance = self.__params['distance']
+        self.magnitude = self.__params['magnitude']
+        self.fermi_level = self.__params['fermi_level']
+        self.spin_included = self.__params['spin_included']
+        self.lanczos_vectors = self.__params['lanczos_vectors']
+        self.number_of_processes = self.__params['number_of_cpus']
+        self.num_of_eigenvalues = self.__params['num_of_eigenvalues']
 
         self.__set_dimension(spin_included=self.spin_included)
 
@@ -53,6 +53,18 @@ class TightBinding(object):
             self.dimension = 10
         else:
             self.dimension = 20
+
+    @staticmethod
+    def __get_non_zero_indices_and_values(dimension, matrix, atom_i, atom_j):
+
+        matrix_non_zero_indices = np.where(matrix != 0)
+        matrix_non_zero_values = np.array(matrix[matrix_non_zero_indices])[0]
+        matrix_rows = matrix_non_zero_indices[0] + \
+            int(atom_i * dimension)
+        matrix_columns = matrix_non_zero_indices[1] + \
+            int(atom_j * dimension)
+
+        return matrix_columns, matrix_rows, matrix_non_zero_values
 
     # TODO: Change for scipy version
     def __get_closest_friends(self, points: list) -> list:
@@ -69,25 +81,22 @@ class TightBinding(object):
         Returns: List of indices of points which are neighbours.
         """
         ctree = scsp.cKDTree(points)
-        close_friends_indices = ctree.query_ball_tree(
-            ctree, r=self.distance, p=self.power, eps=self.epsilon)
+        close_friends_indices = ctree.query_pairs(
+            r=self.distance, p=self.power, eps=self.epsilon)
         close_friends_indices = list(close_friends_indices)
         return close_friends_indices
 
-    def __calculate_diagonal_elements(self, data, process):
+    def __calculate_diagonal_elements(self, data: pd.DataFrame, process: (int, None) = None):
         columns, rows, values = [], [], []
         hosts = data.index
         for host in hosts:
             type_of_host = data['type_of_atom'].iloc[host]
-            h_diagonal = self.__slater_koster.calculate_spin_mixing_diagonal()
-            h_diagonal_non_zero_indices = np.where(h_diagonal != 0)
-            h_diagonal_non_zero_values = np.array(
-                h_diagonal[h_diagonal_non_zero_indices])[0]
+            h_diagonal = self.__slater_koster.calculate_spin_mixing_diagonal(
+                type_of_host)
 
-            h_diagonal_rows = h_diagonal_non_zero_indices[0] + int(
-                host * self.dimension)
-            h_diagonal_columns = h_diagonal_non_zero_indices[1] + int(
-                host * self.dimension)
+            h_diagonal_columns, h_diagonal_rows, h_diagonal_non_zero_values = \
+                self.__get_non_zero_indices_and_values(
+                    matrix=h_diagonal, atom_i=host, atom_j=host, dimension=self.dimension)
 
             columns.append(h_diagonal_columns)
             rows.append(h_diagonal_rows)
@@ -95,7 +104,8 @@ class TightBinding(object):
         return_dict[process] = [columns, rows, values]
         return
 
-    def __calculate_non_diagonal_elements(self, data, close_friends, process):
+    def __calculate_non_diagonal_elements(self, data: pd.DataFrame, close_friends: np.array(),
+                                          process: (int, None) = None):
         columns, rows, values = [], [], []
         for friends in close_friends:
             for friend in friends[1:]:
@@ -104,36 +114,39 @@ class TightBinding(object):
                 ri, rj = data['localization'].iloc[host], data['localization'].iloc[friend]
                 type_of_friend = data['type_of_atom'].iloc[friend]
                 h_sk = self.__slater_koster.calculate_spin_mixing_sk(
-                    type_of_host, type_of_friend)
+                    ri=ri, rj=rj, atom_i=type_of_host, atom_j=type_of_friend)
 
-                h_sk_non_zero_indices = np.where(h_sk != 0)
-                h_sk_non_zero_values = np.array(h_sk[h_sk_non_zero_indices])[0]
+            h_sk_columns_ij, h_sk_rows_ij, h_sk_non_zero_values_ij = \
+                self.__get_non_zero_indices_and_values(
+                    matrix=h_sk, atom_i=host, atom_j=friend, dimension=self.dimension)
+            h_sk_columns_ji, h_sk_rows_ji, h_sk_non_zero_values_ji = \
+                self.__get_non_zero_indices_and_values(
+                    matrix=h_sk, atom_i=friend, atom_j=host, dimension=self.dimension)
 
-                h_sk_rows = h_sk_non_zero_indices[0] + \
-                    int(host * self.dimension)
-                h_sk_columns = h_sk_non_zero_indices[1] + \
-                    int(friend * self.dimension)
+            h_sk_columns = np.concatenate((h_sk_columns_ij, h_sk_columns_ji))
+            h_sk_rows = np.concatenate((h_sk_rows_ji, h_sk_rows_ji))
+            h_sk_non_zero_values = np.concatenate(
+                (h_sk_non_zero_values_ij, h_sk_non_zero_values_ji))
 
-                columns.append(h_sk_columns)
-                rows.append(h_sk_rows)
-                values.append(h_sk_non_zero_values)
+            columns.append(h_sk_columns)
+            rows.append(h_sk_rows)
+            values.append(h_sk_non_zero_values)
+
         return_dict[process] = [columns, rows, values]
         return
 
-    # TODO: Chceck this shit
-    def __parallelize_calculations(self, data, close_friends, constants_of_pairs, hosts, atom_store, lp, ld):
-        # https://stackoverflow.com/questions/10415028/how-can-i-recover-the-return-value-of-a-function-passed-to-multiprocessing-proce
-        number_of_processes = self.__number_of_processes
+    def __parallelize_calculations(self, data: pd.DataFrame, splitted_close_friends: np.array,
+                                   number_of_processes: (int, None)):
         manager = multiprocessing.Manager()
         self.__return_dict = manager.dict()
         jobs = []
-        for i in range(0, number_of_processes + 1):
+        for i, close_friends in zip(range(0, number_of_processes + 1), splitted_close_friends):
             if i == number_of_processes:
                 process = multiprocessing.Process(target=self.__calculate_non_diagonal_elements,
-                                                  args=(data, hosts, atom_store, lp, ld, i))
+                                                  args=(data, i))
             else:
                 process = multiprocessing.Process(target=self.__calculate_diagonal_elements,
-                                                  args=(data, close_friends, constants_of_pairs, i))
+                                                  args=(data, close_friends, i))
             jobs.append(process)
             process.start()
 
@@ -142,121 +155,54 @@ class TightBinding(object):
         interaction_matrix_elements = self.return_dict
         return interaction_matrix_elements
 
-    def __run_proper_type_of_calculations(self, **kwargs):
-        number_of_processes = self.__number_of_processes
-        if number_of_processes == 1 or number_of_processes == None:
-            self.__helpers.split_close_friends(
-                kwargs, number_of_processes=number_of_processes)
-            interaction_matrix_elements = self.__parallelize_calculations(
-                kwargs)
+    def __run_interaction_matrix_calculations(self, data: pd.DataFrame):
+        atom_localizations = data['localization'].values.tolist()
+        close_friends = self.__get_closest_friends(points=atom_localizations)
+        if self.__number_of_processes == 1 or self.__number_of_processes == None:
+            number_of_processes = 1
+            diag_columns, diag_rows, diag_values = \
+                self.__calculate_diagonal_elements(data=data)
+            nondiag_columns, nondiag_rows, nondiag_values = \
+                self.__calculate_non_diagonal_elements(
+                    data=data, close_friends=close_friends)
+            interaction_matrix_elements = [diag_columns, nondiag_columns,
+                                           diag_rows, nondiag_rows,
+                                           diag_values, nondiag_values]
         else:
-            diag_columns, diag_rows, diag_values = self.__calculate_diagonal_elements(
-                kwargs)
-            nondiag_columns, nondiag_rows, nondiag_values = self.__calculate_non_diagonal_elements(
-                kwargs)
-            interaction_matrix_elements = [diag_columns, diag_rows, diag_values,
-                                           nondiag_columns, nondiag_rows, nondiag_values]
+            splitted_close_firends = self.__helpers.split_close_friends(
+                close_friends=close_friends, number_of_cpus=number_of_processes)
+            interaction_matrix_elements = \
+                self.__parallelize_calculations(
+                    data=data, splitted_close_friends=splitted_close_firends,
+                    number_of_processes=number_of_processes)
+
+        self.__helpers.save_log(
+            '[INFO]: Calculations are runned on {} processes/CPUS\n'.format(number_of_processes))
         return interaction_matrix_elements
 
-    def __construct_interaction_matrix(self, interaction_matrix_elements: (dict, list)):
-        if type(interaction_matrix_elements) == dict:
-            pass
-        if type(interaction_matrix_elements) == list:
-            pass
-        return
+    def __construct_interaction_matrix(self, data: pd.DataFrame):
+        interaction_matrix_elements = self.__run_interaction_matrix_calculations(
+            data)
+        if self.__number_of_processes == 1 or self.__number_of_processes == None:
+            columns = np.concatenate(interaction_matrix_elements[0:2])
+            rows = np.concatenate(interaction_matrix_elements[2:4])
+            values = np.concatenate(interaction_matrix_elements[4:6])
+        else:
+            columns_contener, rows_contener, values_contener = [], [], []
+            for i in range(0, number_of_processes + 1):
+                columns, rows, values = interaction_matrix_elements[i]
+                columns_contener.append(columns)
+                rows_contener.append(rows)
+                values_contener.append(values)
 
-    # TODO split into processes
-    def __get_non_zero_values_and_indices(self, data: pd.DataFrame, distance: float, constants_of_pairs: dict, atom_store: dict,
-                                          calculation_type: str = 'non spin', method: str = 'distance', number_of_friends: int = None,
-                                          lp: float = 0, ld: float = 0, flat: bool = True) -> (list, list, list):
-        """
-        Method calculates non-zero values (Slater Koster matrix values) with their localization (indices of rows and
-            columns) in the final interaction matrix.
-        Args:
-            data: Input DataFrame where: Indices - integers -standard pd.DataFrame enumeration,
-                  Columns: number_of_atom - number of atom in lattice, localization - localization of atom in
-                  lattice in format of nested lists [[x1,y1,z1], [x2,y2,z2],...], type_of_atom - type of element of atom
-                  string format, for example 'C'
-            calculation_type: if calculation_type == 'non spin' Slater Koster matrix will not include Spin-Orbit
-                              interactions; else Spin-Orbit interactions will be included
-            method: type of method of searching closest neighbours; if method == 'distance', algorithm will search
-                    points in defined distance; else algorithm, will find defined by user number of neighbours.
-            distance: maximum distance defining point as closest neighbour.
-            constants_of_pairs: dict of Slater Koster constants describing interactions between two elements for each
-                                orbital; example of input - {('C', 'C'): {'V_sssigma': 0, 'V_spsigma': 0,
-                                'V_sdsigma': 0,...
-            atom_store: dict of each orbital energies for element; example of input - {'C': {'Es': -8.71, 'Epx': 0,
-                        'Epy': 0, ... ; if calculation_type == 'non spin' we have to remember about different spin
-                         energies.
-            number_of_friends: defined by user, number of neighbours of point in lattice
-            lp: p-orbital interaction constant in Spin-Orbit interactions, None if calculation_type == 'non spin'
-            ld: d-orbital interaction constant in Spin-Orbit interactions, None if calculation_type == 'non spin'
-            flat:
-        Returns: Lists of row, column indices and list of non-zero values
-        """
+            columns = np.concatenate(columns_contener)
+            rows = np.concatenate(rows_contener)
+            values = np.concatenate(values_contener)
 
-        atom_localization = data['localization'].values.tolist()
-        close_friends = self.__get_closest_friends(
-            atom_localization, method, number_of_friends, distance)
-
-        columns = []
-        rows = []
-        values = []
-        for friends in close_friends:
-            host = friends[0]
-            type_of_host = data['type_of_atom'].iloc[host]
-            h_diagonal = self.__slater_koster.calculate_spin_mixing_diagonal(calculation_type,
-                                                                             atom_store,
-                                                                             type_of_host,
-                                                                             lp,
-                                                                             ld)
-            h_diagonal_non_zero_indices = np.where(h_diagonal != 0)
-            h_diagonal_non_zero_values = np.array(
-                h_diagonal[h_diagonal_non_zero_indices])[0]
-
-            h_diagonal_rows = h_diagonal_non_zero_indices[0] + int(
-                host * dimension)
-            h_diagonal_columns = h_diagonal_non_zero_indices[1] + int(
-                host * dimension)
-
-            columns.append(h_diagonal_columns)
-            rows.append(h_diagonal_rows)
-            values.append(h_diagonal_non_zero_values)
-            if len(friends) > 1:
-                for friend in friends[1:]:
-                    ri, rj = data['localization'].iloc[host], data['localization'].iloc[friend]
-                    type_of_friend = data['type_of_atom'].iloc[friend]
-                    h_sk = self.__slater_koster.calculate_spin_mixing_sk(calculation_type,
-                                                                         ri,
-                                                                         rj,
-                                                                         constants_of_pairs,
-                                                                         type_of_host,
-                                                                         type_of_friend,
-                                                                         flat)
-
-                    h_sk_non_zero_indices = np.where(h_sk != 0)
-                    h_sk_non_zero_values = np.array(
-                        h_sk[h_sk_non_zero_indices])[0]
-
-                    h_sk_rows = h_sk_non_zero_indices[0] + \
-                        int(host * dimension)
-                    h_sk_columns = h_sk_non_zero_indices[1] + \
-                        int(friend * dimension)
-
-                    columns.append(h_sk_columns)
-                    rows.append(h_sk_rows)
-                    values.append(h_sk_non_zero_values)
-            else:
-                pass
-
-        columns = np.concatenate(columns)
-        rows = np.concatenate(rows)
-        values = np.concatenate(values)
         self.__helpers.save_log('[INFO]: Interaction matrix calculated \n')
+        return columns, rows, values
 
-        return columns, rows, values, dimension
-
-    def __create_sparse_matrix(self, number_of_atoms, **kwargs) -> csr_matrix:
+    def __create_sparse_matrix(self, number_of_atoms: int, **kwargs) -> csr_matrix:
         """
         Method converts calculated rows, columns, and non-zero values into sparse matrix.
         Args:
@@ -265,10 +211,11 @@ class TightBinding(object):
         Returns: sparse interaction matrix for all interacting atoms in lattice in csr format
         """
 
-        columns, rows, values, dimension = self.__get_non_zero_values_and_indices(
+        columns, rows, values = self.__construct_interaction_matrix(
             **kwargs)
         matrix_final_1 = coo_matrix((values, (rows, columns)),
-                                    shape=(self.dimension * number_of_atoms, self.dimension * number_of_atoms))
+                                    shape=(self.dimension * number_of_atoms,
+                                           self.dimension * number_of_atoms))
         matrix_final = csr_matrix(matrix_final_1)
 
         return matrix_final

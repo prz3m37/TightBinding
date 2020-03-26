@@ -10,49 +10,46 @@ class SlaterKoster(object):
         User can define whether wants to take Spin Orbit interaction into consideration or not.
     """
 
-    def __init__(self):
-        self.__initialize_slater_koster_params(self)
+    def __init__(self, spin_included):
+        self.__initialize_slater_koster_params()
 
     def __initialize_slater_koster_params(self):
+        self.spin_included = spin_included
         self.lp = self.__configuration['lp']
         self.ld = self.__configuration['ld']
-        self.spin_included = self.__configuration['spin_included']
         self.calculation_type = self.__configuration['calculation_type']
-        self.diagonal_energies = self.__configuration['diagonal_energies']
+        self.on_site_energies = self.__configuration['on_site_energies']
+        self.hopping_energies = self.__configuration['hopping_energies']
         self.interactive_constants = self.__configuration['interactive_constants']
         return
 
-    @staticmethod
-    def __get_atom_type(atom_store: dict, atom_type: str) -> (dict, None):
+    def __get_atom_type(self, atom_type: str) -> (dict, None):
         """
         Method passes dictionary of physical constants of atoms in lattice
         Args:
-            atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
         Returns: dict  dict with physical constants (energies of bands) of atoms in lattice
         """
 
-        if atom_store is None:
+        if self.on_site_energies is None:
             atom = None
         else:
-            atom = atom_store[atom_type]
+            atom = self.on_site_energies[atom_type]
 
         return atom
 
-    @staticmethod
-    def __get_interaction_constants(constants: dict, atom_i_type: str, atom_j_type: str) -> (dict, None):
+    def __get_hopping_energies(self, atom_i_type: str, atom_j_type: str) -> (dict, None):
         """
         Method returns dictionary with interaction constants. If constants are None,
             then all constants are equal to zero
         Args:
-            constants: interaction constants
             atom_i_type: type of element interacting atom on i-th position
             atom_j_type: type of element interacting atom on j-th position
         Returns: dictionary with interaction constants or None if constants == None
         """
+        constants = self.hopping_energies
 
         if constants is None:
-
             const = {'V_sssigma': 0,
                      'V_spsigma': 0,
                      'V_sdsigma': 0,
@@ -68,9 +65,9 @@ class SlaterKoster(object):
                      'V_ddpi': 0,
                      'V_ddd': 0}
         else:
-            const = constants[atom_i_type, atom_j_type]
+            hopping_energies = constants[atom_i_type, atom_j_type]
 
-        return const
+        return hopping_energies
 
     @staticmethod
     def __get_directional_cosines(ri: np.array, rj: np.array) -> dict:
@@ -87,14 +84,12 @@ class SlaterKoster(object):
              r_diff_mod, 'nz': r_diff[2] / r_diff_mod}
         return n
 
-    def __calculate_slayterkoster_matrix(self, ri: int, rj: int,
-                                         constants_of_pairs: dict, atom_i_type: str, atom_j_type: str) -> np.matrix:
+    def __calculate_slayterkoster_matrix(self, ri: int, rj: int, atom_i_type: str, atom_j_type: str) -> np.matrix:
         """
         Method calculates Slater-Koster matrix (dimension: 10x10)
         Args:
             ri: position of i-th atom in lattice
             rj: position of j-th atom in lattice
-            constants_of_pairs: dictionary with interaction constants
             atom_i_type: type of element i-th atom
             atom_j_type: type of element j-th atom
         Returns: Slater-Koster matrix
@@ -102,8 +97,8 @@ class SlaterKoster(object):
 
         H_SK = np.zeros((10, 10))
         n = self.__get_directional_cosines(ri, rj)
-        integral_const_of_atom = self.__get_interaction_constants(
-            constants_of_pairs, atom_i_type, atom_j_type)
+        integral_const_of_atom = self.__get_hopping_energies(
+            atom_i_type, atom_j_type)
 
         Vsss = integral_const_of_atom['V_sssigma']
         Vsps = integral_const_of_atom['V_spsigma']
@@ -264,23 +259,21 @@ class SlaterKoster(object):
 
         return np.matrix(H_SK)
 
-    def __spin_orbit_hamiltonian(self, atom_store: dict, atom_type: str, lp: float, ld: float, sgn: (float, None),
-                                 sigma: str) -> np.matrix:
+    def __spin_orbit_hamiltonian(self, atom_type: str, sgn: (float, None), spin: str) -> np.matrix:
         """
         Method calculates diagonal matrix of band energies for spin-orbit interactions
         Args:
-            atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
             lp: p-band interaction constant for spin-orbit interactions
             ld: d-band interaction constant for spin-orbit interactions
             sgn: spin sign
-            sigma: spin
+            spin: spin
         Returns: Slater-Koster matrix for spin-orbit interactions
         """
 
         H_SK = np.zeros((10, 10), complex)
 
-        state_energies_of_atom = self.__get_atom_type(atom_store, atom_type)
+        state_energies_of_atom = self.__get_atom_type(atom_type)
 
         if state_energies_of_atom is None:
 
@@ -288,7 +281,7 @@ class SlaterKoster(object):
 
         else:
 
-            if sigma == ' up up':
+            if spin == ' up up':
 
                 Es = state_energies_of_atom['Es up up']
                 Epx = state_energies_of_atom['Epx up up']
@@ -302,17 +295,17 @@ class SlaterKoster(object):
                 Estar = state_energies_of_atom['Estar up up']
 
                 H_SK[0][0] = Es
-                H_SK[1][1] = Epx * sgn * lp
-                H_SK[1][2] = - 1j * sgn * lp * 0.5
+                H_SK[1][1] = Epx * sgn * self.lp
+                H_SK[1][2] = - 1j * sgn * self.lp * 0.5
                 H_SK[1][3] = 0
 
-                H_SK[2][1] = 1j * 0.5 * sgn * lp
-                H_SK[2][2] = Epy * sgn * lp
+                H_SK[2][1] = 1j * 0.5 * sgn * self.lp
+                H_SK[2][2] = Epy * sgn * self.lp
                 H_SK[2][3] = 0
 
                 H_SK[3][1] = 0
                 H_SK[3][2] = 0
-                H_SK[3][3] = Epz * sgn * lp
+                H_SK[3][3] = Epz * sgn * self.lp
 
                 H_SK[4][4] = Edxy
                 H_SK[4][5] = 0
@@ -323,7 +316,7 @@ class SlaterKoster(object):
                 H_SK[5][4] = 0
                 H_SK[5][5] = Edyz
                 H_SK[5][6] = 0
-                H_SK[5][7] = 1j * 0.5 * sgn * ld
+                H_SK[5][7] = 1j * 0.5 * sgn * self.ld
                 H_SK[5][8] = 0
 
                 H_SK[6][4] = 0
@@ -333,12 +326,12 @@ class SlaterKoster(object):
                 H_SK[6][8] = 0
 
                 H_SK[7][4] = 0
-                H_SK[7][5] = -1j * 0.5 * sgn * ld
+                H_SK[7][5] = -1j * 0.5 * sgn * self.ld
                 H_SK[7][6] = 0
                 H_SK[7][7] = Edxz
                 H_SK[7][8] = 0
 
-                H_SK[8][4] = -1j * sgn * ld
+                H_SK[8][4] = -1j * sgn * self.ld
                 H_SK[8][5] = 0
                 H_SK[8][6] = 0
                 H_SK[8][7] = 0
@@ -346,7 +339,7 @@ class SlaterKoster(object):
 
                 H_SK[9][9] = Estar
 
-            elif sigma == ' down down':
+            elif spin == ' down down':
 
                 Es = state_energies_of_atom['Es down down']
                 Epx = state_energies_of_atom['Epx down down']
@@ -360,17 +353,17 @@ class SlaterKoster(object):
                 Estar = state_energies_of_atom['Estar down down']
 
                 H_SK[0][0] = Es
-                H_SK[1][1] = Epx * sgn * lp
-                H_SK[1][2] = - 1j * sgn * lp * 0.5
+                H_SK[1][1] = Epx * sgn * self.lp
+                H_SK[1][2] = - 1j * sgn * self.lp * 0.5
                 H_SK[1][3] = 0
 
-                H_SK[2][1] = 1j * 0.5 * sgn * lp
-                H_SK[2][2] = Epy * sgn * lp
+                H_SK[2][1] = 1j * 0.5 * sgn * self.lp
+                H_SK[2][2] = Epy * sgn * self.lp
                 H_SK[2][3] = 0
 
                 H_SK[3][1] = 0
                 H_SK[3][2] = 0
-                H_SK[3][3] = Epz * sgn * lp
+                H_SK[3][3] = Epz * sgn * self.lp
 
                 H_SK[4][4] = Edxy
                 H_SK[4][5] = 0
@@ -381,7 +374,7 @@ class SlaterKoster(object):
                 H_SK[5][4] = 0
                 H_SK[5][5] = Edyz
                 H_SK[5][6] = 0
-                H_SK[5][7] = 1j * 0.5 * sgn * ld
+                H_SK[5][7] = 1j * 0.5 * sgn * self.ld
                 H_SK[5][8] = 0
 
                 H_SK[6][4] = 0
@@ -391,12 +384,12 @@ class SlaterKoster(object):
                 H_SK[6][8] = 0
 
                 H_SK[7][4] = 0
-                H_SK[7][5] = -1j * 0.5 * sgn * ld
+                H_SK[7][5] = -1j * 0.5 * sgn * self.ld
                 H_SK[7][6] = 0
                 H_SK[7][7] = Edxz
                 H_SK[7][8] = 0
 
-                H_SK[8][4] = -1j * sgn * ld
+                H_SK[8][4] = -1j * sgn * self.ld
                 H_SK[8][5] = 0
                 H_SK[8][6] = 0
                 H_SK[8][7] = 0
@@ -409,44 +402,44 @@ class SlaterKoster(object):
                 H_SK[0][0] = 0
                 H_SK[1][1] = 0
                 H_SK[1][2] = 0
-                H_SK[1][3] = 1/2 * lp
+                H_SK[1][3] = 1/2 * self.lp
 
                 H_SK[2][1] = 0
                 H_SK[2][2] = 0
-                H_SK[2][3] = -1j * 0.5 * lp
+                H_SK[2][3] = -1j * 0.5 * self.lp
 
                 H_SK[3][1] = 0
-                H_SK[3][1] = -1j * 0.5 * lp
-                H_SK[3][2] = 1j * 0.5 * lp
+                H_SK[3][1] = -1j * 0.5 * self.lp
+                H_SK[3][2] = 1j * 0.5 * self.lp
 
                 H_SK[4][4] = 0
                 H_SK[4][5] = 1/2 * ld
                 H_SK[4][6] = 0
-                H_SK[4][7] = -1j * 0.5 * ld
+                H_SK[4][7] = -1j * 0.5 * self.ld
                 H_SK[4][8] = 0
 
                 H_SK[5][4] = -1/2 * ld
                 H_SK[5][5] = 0
-                H_SK[5][6] = -1j * np.sqrt(3) * ld / 2
+                H_SK[5][6] = -1j * np.sqrt(3) * self.ld / 2
                 H_SK[5][7] = 0
-                H_SK[5][8] = -1j * 0.5 * ld
+                H_SK[5][8] = -1j * 0.5 * self.ld
 
-                H_SK[6][4] = 1j * 0.5 * ld
+                H_SK[6][4] = 1j * 0.5 * self.ld
                 H_SK[6][5] = 0
                 H_SK[6][6] = np.sqrt(3) / 2 * ld
                 H_SK[6][7] = 0
-                H_SK[6][8] = -1j * 0.5 * ld
+                H_SK[6][8] = -1j * 0.5 * self.ld
 
-                H_SK[7][4] = 1j * 0.5 * ld
+                H_SK[7][4] = 1j * 0.5 * self.ld
                 H_SK[7][5] = 0
                 H_SK[7][6] = np.sqrt(3) / 2 * ld
                 H_SK[7][7] = 0
-                H_SK[7][8] = -1j * 0.5 * ld
+                H_SK[7][8] = -1j * 0.5 * self.ld
 
                 H_SK[8][4] = 0
-                H_SK[8][5] = 1j * 0.5 * ld
+                H_SK[8][5] = 1j * 0.5 * self.ld
                 H_SK[8][6] = 0
-                H_SK[8][7] = 1/2 * ld
+                H_SK[8][7] = 1/2 * self.ld
                 H_SK[8][8] = 0
 
                 H_SK[9][9] = 0
@@ -459,23 +452,22 @@ class SlaterKoster(object):
 
             return np.matrix(H_SK)
 
-    def __calculate_energy_matrix(self, atom_store: dict, atom_type: str) -> np.array:
+    def __calculate_energy_matrix(self, atom_type: str) -> np.array:
         """
         Method calculates diagonal matrix of energies for band structure
         Args:
-            atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
         Returns: diagonal matrix of band energies
         """
 
-        atom_parameters = self.__get_atom_type(atom_store, atom_type)
+        atom_parameters = self.__get_atom_type(atom_type)
         H_Rii = np.zeros((10, 10))
 
         if atom_parameters is None:
             np.fill_diagonal(H_Rii, 0)
 
         else:
-            atom_parameters = self.__get_atom_type(atom_store, atom_type)
+            atom_parameters = self.__get_atom_type(atom_type)
 
             Es = atom_parameters['Es']
             Epx = atom_parameters['Epx']
@@ -494,13 +486,11 @@ class SlaterKoster(object):
 
         return H_Rii
 
-    def calculate_spin_mixing_sk(self, spin_included: bool, ri: np.array,
-                                 rj: np.array, constants_of_pairs: dict, atom_i: str, atom_j: str) -> np.matrix:
+    def calculate_spin_mixing_sk(self, ri: np.array, rj: np.array, atom_i: str, atom_j: str) -> np.matrix:
         """
         Method returns interaction matrix of required shape. If spin_included is False then Slater Koster matrix
             is 10x10, else 20x20 (because of spin-orbit interactions)
         Args:
-            spin_included: If spin_included is False then Slater Koster matrix is 10x10, else 20x20.
             ri: position of i-th atom in lattice
             rj: position of i-th atom in lattice
             constants_of_pairs: dictionary with interaction constants
@@ -509,41 +499,35 @@ class SlaterKoster(object):
         Returns: Slater Koster matrix of required dimension
         """
 
-        if spin_included == False:
-            the_chosen_one = np.matrix(self.__calculate_slayterkoster_matrix(
-                ri, rj, constants_of_pairs, atom_i, atom_j))
+        if self.spin_included == False:
+            the_chosen_one = np.matrix(
+                self.__calculate_slayterkoster_matrix(ri, rj, atom_i, atom_j))
         else:
             equal_spin_matrix = self.__calculate_slayterkoster_matrix(
-                ri, rj, constants_of_pairs, atom_i, atom_j)
+                ri, rj, atom_i, atom_j)
 
             the_chosen_one = np.bmat([[equal_spin_matrix if i != j else np.zeros((10, 10))
                                        for i in range(2)] for j in range(2)])
 
         return the_chosen_one
 
-    def calculate_spin_mixing_diagonal(self, spin_included: bool, atom_store: dict, atom_type: str, lp: float,
-                                       ld: float) -> np.matrix:
+    def calculate_spin_mixing_diagonal(self, atom_type: str) -> np.matrix:
         """
         Method returns matrix of diagonal energies of required shape. If spin_included is False then
             diagonal matrix is 10x10, else 20x20 (because of spin-orbit interactions).
         Args:
-            spin_included: If spin_included is False then Slater Koster matrix is 10x10, else 20x20.
             is 10x10, else 20x20 (because of spin-orbit interactions)
-            atom_store: dict with physical constants (energies of bands) of atoms in lattice
             atom_type: type of element (for example 'C')
-            lp: p-band interaction constant for spin-orbit interactions
-            ld: d-band interaction constant for spin-orbit interactions
         Returns:
         """
 
-        if spin_included == False:
-            diagonal_one = self.__calculate_energy_matrix(
-                atom_store, atom_type)
+        if self.spin_included == False:
+            diagonal_one = self.__calculate_energy_matrix(atom_type)
 
         else:
-            diagonal_one = np.bmat([[self.__spin_orbit_hamiltonian(atom_store, atom_type, lp, ld, 1, ' up up'),
-                                     self.__spin_orbit_hamiltonian(atom_store, atom_type, lp, ld, None, ' up down')],
-                                    [self.__spin_orbit_hamiltonian(atom_store, atom_type, lp, ld, -1, ' down down'),
-                                     self.__spin_orbit_hamiltonian(atom_store, atom_type, lp, ld, None, ' up down').H]])
+            diagonal_one = np.bmat([[self.__spin_orbit_hamiltonian(atom_type=atom_type, sgn=1, spin=' up up'),
+                                     self.__spin_orbit_hamiltonian(atom_type=atom_type, spin=' up down')],
+                                    [self.__spin_orbit_hamiltonian(atom_type=atom_type, sgn=-1, spin=' down down'),
+                                     self.__spin_orbit_hamiltonian(atom_type=atom_type, spin=' up down').H]])
 
         return np.matrix(diagonal_one)

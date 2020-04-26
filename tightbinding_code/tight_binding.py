@@ -29,7 +29,7 @@ class TightBinding(object):
         self.__return_dict = None
         self.__helpers = helpers
         self.__params = configuration
-        self.__load_tight_binding_params()
+        self.__initialize_tight_binding_params()
         self.__slater_koster = SlaterKoster(self.spin_included)
 
     def __initialize_tight_binding_params(self):
@@ -66,7 +66,7 @@ class TightBinding(object):
 
         return matrix_columns, matrix_rows, matrix_non_zero_values
 
-    # TODO: Change for scipy version
+    # TODO: Change for scipy version -- DONE
     def __get_closest_friends(self, points: list) -> list:
         """
         Method uses KDTree algorithm for searching closets neighbours (according to Euclidean space) of each atom in

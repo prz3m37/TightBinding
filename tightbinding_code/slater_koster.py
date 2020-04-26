@@ -20,7 +20,6 @@ class SlaterKoster(object):
         self.calculation_type = self.__configuration['calculation_type']
         self.on_site_energies = self.__configuration['on_site_energies']
         self.hopping_energies = self.__configuration['hopping_energies']
-        self.interactive_constants = self.__configuration['interactive_constants']
         return
 
     def __get_atom_type(self, atom_type: str) -> (dict, None):

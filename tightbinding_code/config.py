@@ -42,15 +42,15 @@ configuration = {
     'parametrization': {
         'ld': None,
         'lp': None,
+        'power': None,
+        'epsilon': None,
         'magnitude': 'LM',
+        "number_of_cpus": 1,
+        'spin_included': False,
         'distance': 1.42,
-        'x_num_of_steps': 3,
         'lanczos_vectors': None,
-        'number_of_friends': None,
         'number_of_eigenvalues': 1,
-        'calculation_type': 'non spin',
-        'neighbour_calculation_method': 'distance',
-        'diagonal_energies': diagonal_energies,
+        'on_site_energies': diagonal_energies,
         'interactive_constants': interactive_constants,
         'fermi_level': 0}
 }
